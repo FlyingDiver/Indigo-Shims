@@ -171,7 +171,7 @@ class Plugin(indigo.PluginBase):
         
                 if device.pluginProps["shimSensorSubtype"] == "Generic":
                     device.updateStateImageOnServer(indigo.kStateImageSel.None)
-                    device.updateStateOnServer(key='sensorValue', value=value)
+                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=2, uiValue=u'{:.2f}'.format(value))
 
                 elif device.pluginProps["shimSensorSubtype"] == "Temperature-F":
                     device.updateStateImageOnServer(indigo.kStateImageSel.TemperatureSensor)
