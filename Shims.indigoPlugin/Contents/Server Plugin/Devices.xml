@@ -174,6 +174,8 @@
                     <Option value="Temperature-F">Temperature (F)</Option>
                     <Option value="Temperature-C">Temperature (C)</Option>
                     <Option value="Humidity">Humidity</Option>
+                    <Option value="Pressure-inHg">Humidity (inHg)</Option>
+                    <Option value="Pressure-mb">Humidity (mb)</Option>
                     <Option value="Luminance">Luminance (lux)</Option>
                     <Option value="Luminance%">Luminance (%)</Option>
                     <Option value="ppm">Concentration (ppm)</Option>

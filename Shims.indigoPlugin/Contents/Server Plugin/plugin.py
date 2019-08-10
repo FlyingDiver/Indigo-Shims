@@ -175,27 +175,36 @@ class Plugin(indigo.PluginBase):
 
                 elif device.pluginProps["shimSensorSubtype"] == "Temperature-F":
                     device.updateStateImageOnServer(indigo.kStateImageSel.TemperatureSensor)
-                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=1, uiValue=str(value) + u' °F')
+                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=1, uiValue=u'{:.1f} °F'.format(value))
 
                 elif device.pluginProps["shimSensorSubtype"] == "Temperature-C":
                     device.updateStateImageOnServer(indigo.kStateImageSel.TemperatureSensor)
-                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=1, uiValue=str(value) + u' °C')
+                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=1, uiValue=u'{:.1f} °C'.format(value))
 
                 elif device.pluginProps["shimSensorSubtype"] == "Humidity":
                     device.updateStateImageOnServer(indigo.kStateImageSel.HumiditySensor)
-                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=0, uiValue=str(value) + u'%')
+                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=0, uiValue=u'{:.0f}%'.format(value))
+
+                elif device.pluginProps["shimSensorSubtype"] == "Pressure-inHg":
+                    device.updateStateImageOnServer(indigo.kStateImageSel.None)
+                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=2, uiValue=u'{:.2f} inHg'.format(value))
+
+                elif device.pluginProps["shimSensorSubtype"] == "Pressure-mb":
+                    device.updateStateImageOnServer(indigo.kStateImageSel.None)
+                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=2, uiValue=u'{:.2f} mb'.format(value))
 
                 elif device.pluginProps["shimSensorSubtype"] == "Luminence":
                     device.updateStateImageOnServer(indigo.kStateImageSel.LightSensor)
-                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=0, uiValue=str(value) + u' lux')
+                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=0, uiValue=u'{:.0f} lux'.format(value))
 
                 elif device.pluginProps["shimSensorSubtype"] == "Luminence%":
                     device.updateStateImageOnServer(indigo.kStateImageSel.LightSensor)
-                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=0, uiValue=str(value) + u'%')
+                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=0, uiValue=u'{:.0f}%'.format(value))
 
                 elif device.pluginProps["shimSensorSubtype"] == "ppm":
                     device.updateStateImageOnServer(indigo.kStateImageSel.None)
-                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=0, uiValue=str(value) + u'ppm')
+                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=0, uiValue=u'{:.0f} ppm'.format(value))
+
 
                 else:
                     self.logger.debug(u"updateDevice masqSensor, unknown subtype: %s" % (device.pluginProps["shimSensorSubtype"]))
