@@ -165,49 +165,97 @@ class Plugin(indigo.PluginBase):
                 value = float(message_value)
             except ValueError as e:
                 self.logger.error(u"{}: matchAndUpdate unable to convert '{}' to float: {}".format(device.name, message_value, e))
+                return
+                
+            self.logger.debug(u"{}: Updating state to {}".format(device.name, value))
+    
+            if device.pluginProps["shimSensorSubtype"] == "Generic":
+                device.updateStateImageOnServer(indigo.kStateImageSel.None)
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=2, uiValue=u'{:.2f}'.format(value))
+
+            elif device.pluginProps["shimSensorSubtype"] == "Temperature-F":
+                device.updateStateImageOnServer(indigo.kStateImageSel.TemperatureSensor)
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=1, uiValue=u'{:.1f} °F'.format(value))
+
+            elif device.pluginProps["shimSensorSubtype"] == "Temperature-C":
+                device.updateStateImageOnServer(indigo.kStateImageSel.TemperatureSensor)
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=1, uiValue=u'{:.1f} °C'.format(value))
+
+            elif device.pluginProps["shimSensorSubtype"] == "Humidity":
+                device.updateStateImageOnServer(indigo.kStateImageSel.HumiditySensor)
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=0, uiValue=u'{:.0f}%'.format(value))
+
+            elif device.pluginProps["shimSensorSubtype"] == "Pressure-inHg":
+                device.updateStateImageOnServer(indigo.kStateImageSel.None)
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=2, uiValue=u'{:.2f} inHg'.format(value))
+
+            elif device.pluginProps["shimSensorSubtype"] == "Pressure-mb":
+                device.updateStateImageOnServer(indigo.kStateImageSel.None)
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=2, uiValue=u'{:.2f} mb'.format(value))
+
+            elif device.pluginProps["shimSensorSubtype"] == "Luminence":
+                device.updateStateImageOnServer(indigo.kStateImageSel.LightSensor)
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=0, uiValue=u'{:.0f} lux'.format(value))
+
+            elif device.pluginProps["shimSensorSubtype"] == "Luminence%":
+                device.updateStateImageOnServer(indigo.kStateImageSel.LightSensor)
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=0, uiValue=u'{:.0f}%'.format(value))
+
+            elif device.pluginProps["shimSensorSubtype"] == "ppm":
+                device.updateStateImageOnServer(indigo.kStateImageSel.None)
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=0, uiValue=u'{:.0f} ppm'.format(value))
+
+
             else:
+                self.logger.debug(u"{}: matchAndUpdate, unknown shimSensorSubtype: {}".format(device.pluginProps["shimSensorSubtype"]))
+                
+            states_key = device.pluginProps.get('state_dict_payload_key', None)
+            if not states_key:
+                return
+            data = json.loads(message_data["payload"])
+            self.logger.threaddebug(u"{}: matchAndUpdate state_dict_payload_key, key = {}".format(device.name, states_key))
+            states_dict = self.recurseDict(states_key, data)
+            if not (states_dict and len(states_dict) > 0):
+               return
+             
+            old_states =  device.pluginProps.get("states_list", indigo.List())
+            new_states = indigo.List()                
+            states_list = []
+            for key in states_dict:
+                new_states.append(key)
+                states_list.append({'key': key, 'value': states_dict[key] })
+            if old_states != new_states:
+                self.logger.threaddebug(u"{}: matchAndUpdate, new states_list: {}".format(device.name, new_states))
+                newProps = device.pluginProps
+                newProps["states_list"] = new_states
+                device.replacePluginPropsOnServer(newProps)
+                device.stateListOrDisplayStateIdChanged()    
+            device.updateStatesOnServer(states_list)
 
-                self.logger.debug(u"{}: Updating state to {}".format(device.name, value))
-        
-                if device.pluginProps["shimSensorSubtype"] == "Generic":
-                    device.updateStateImageOnServer(indigo.kStateImageSel.None)
-                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=2, uiValue=u'{:.2f}'.format(value))
+        else:
+            self.logger.warning(u"{}: Invalid device type: {}".format(device.name, device.deviceTypeId))
 
-                elif device.pluginProps["shimSensorSubtype"] == "Temperature-F":
-                    device.updateStateImageOnServer(indigo.kStateImageSel.TemperatureSensor)
-                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=1, uiValue=u'{:.1f} °F'.format(value))
+    def getStateList(self, filter, valuesDict, typeId, deviceId):
+        returnList = list()
+        if 'states_list' in valuesDict:
+            for topic in valuesDict['states_list']:
+                returnList.append(topic)
+        return returnList
 
-                elif device.pluginProps["shimSensorSubtype"] == "Temperature-C":
-                    device.updateStateImageOnServer(indigo.kStateImageSel.TemperatureSensor)
-                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=1, uiValue=u'{:.1f} °C'.format(value))
-
-                elif device.pluginProps["shimSensorSubtype"] == "Humidity":
-                    device.updateStateImageOnServer(indigo.kStateImageSel.HumiditySensor)
-                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=0, uiValue=u'{:.0f}%'.format(value))
-
-                elif device.pluginProps["shimSensorSubtype"] == "Pressure-inHg":
-                    device.updateStateImageOnServer(indigo.kStateImageSel.None)
-                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=2, uiValue=u'{:.2f} inHg'.format(value))
-
-                elif device.pluginProps["shimSensorSubtype"] == "Pressure-mb":
-                    device.updateStateImageOnServer(indigo.kStateImageSel.None)
-                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=2, uiValue=u'{:.2f} mb'.format(value))
-
-                elif device.pluginProps["shimSensorSubtype"] == "Luminence":
-                    device.updateStateImageOnServer(indigo.kStateImageSel.LightSensor)
-                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=0, uiValue=u'{:.0f} lux'.format(value))
-
-                elif device.pluginProps["shimSensorSubtype"] == "Luminence%":
-                    device.updateStateImageOnServer(indigo.kStateImageSel.LightSensor)
-                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=0, uiValue=u'{:.0f}%'.format(value))
-
-                elif device.pluginProps["shimSensorSubtype"] == "ppm":
-                    device.updateStateImageOnServer(indigo.kStateImageSel.None)
-                    device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=0, uiValue=u'{:.0f} ppm'.format(value))
-
-
-                else:
-                    self.logger.debug(u"updateDevice masqSensor, unknown subtype: %s" % (device.pluginProps["shimSensorSubtype"]))
+    def getDeviceStateList(self, device):
+        stateList = indigo.PluginBase.getDeviceStateList(self, device)
+        if device.deviceTypeId != "shimValueSensor":
+            return stateList
+        add_states =  device.pluginProps.get("states_list", indigo.List())
+        for key in add_states:
+            stateList.append({  "Disabled"     : False, 
+                                "Key"          : key, 
+                                "StateLabel"   : "",   
+                                "TriggerLabel" : "",   
+                                "Type"         : 150 })
+        return stateList
+                
+                
       
     def getBrokerDevices(self, filter="", valuesDict=None, typeId="", targetId=0):
 
