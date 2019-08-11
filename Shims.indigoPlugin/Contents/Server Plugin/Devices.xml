@@ -290,6 +290,13 @@
             <Field id="shimSensorPrecision" type="textfield" defaultValue="2">
                 <Label>Precision:</Label>
             </Field>
+            <Field id="adjustmentFunction" type="textfield" defaultValue="">
+                <Label>Adjustment Function:
+                </Label>
+            </Field>
+            <Field id="adjustmentFunction_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="state_location_payload_type" visibleBindingValue="json">
+                <Label>Enter function in terms of 'x' to adjust state value. For example, '(x * 9.0/5.0) + 32.0' to convert from degrees C to F.</Label>
+            </Field>
             <Field id="devices_separator2" type="separator"/>
             <Field id="state_dict_payload_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="state_location_payload_type" visibleBindingValue="json">
                 <Label>If the payload has a nested dict with multiple entries that should all be states of the device, enter they key(s) for that dict.  If nested entry, enter each key with '.' between.</Label>

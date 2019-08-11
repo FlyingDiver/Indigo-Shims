@@ -31,7 +31,7 @@ class Plugin(indigo.PluginBase):
 
     def startup(self):
         indigo.server.log(u"Starting Shims")
-        self.shimDevices = {}
+        self.shimDevices = []
         indigo.server.subscribeToBroadcast(u"com.flyingdiver.indigoplugin.mqtt", u"com.flyingdiver.indigoplugin.mqtt-message_queued", "message_handler")
 
     def shutdown(self):
@@ -47,7 +47,8 @@ class Plugin(indigo.PluginBase):
             return
         
         message_data = None
-        for device in self.shimDevices.values():
+        for deviceID in self.shimDevices:
+            device = indigo.devices[deviceID]
             message_type = device.pluginProps['message_type']
             if notification["message_type"] == message_type:
                 if not message_data:
@@ -76,16 +77,16 @@ class Plugin(indigo.PluginBase):
             self.logger.error(u"{}: Unknown device version: {}".format(device.name. instanceVers))
 
         assert device.id not in self.shimDevices
-        self.shimDevices[device.id] = device
+        self.shimDevices.append(device.id)
 
 
     def deviceStopComm(self, device):
         self.logger.info(u"{}: Stopping Device".format(device.name))
         assert device.id in self.shimDevices
-        del self.shimDevices[device.id]
+        self.shimDevices.remove(device.id)
 
-    def didDeviceCommPropertyChange(self, origDev, newDev):
-        return False
+    def didDeviceCommPropertyChange(self, oldDevice, newDevice):
+        return True
 
     def recurseDict(self, key_string, data_dict):
         self.logger.threaddebug(u"recurseDict key_string = {}, data_dict= {}".format(key_string, data_dict))
@@ -179,10 +180,14 @@ class Plugin(indigo.PluginBase):
                 self.logger.error(u"{}: matchAndUpdate unable to convert '{}' to float: {}".format(device.name, message_value, e))
                 return
                            
-            function = device.pluginProps.get("conversionFunction", None)
+            function = device.pluginProps.get("adjustmentFunction", None)            
+            self.logger.debug(u"{}: matchAndUpdate adjustmentFunction: '{}'".format(device.name, function))
             if function:
-                x = value
-                value = eval(function)
+                if 'indigo' in function:
+                    self.logger.warning(u"{}: Invalid method in adjustmentFunction: '{}'".format(device.name, function))
+                else:
+                    x = value
+                    value = eval(function)
 
             self.logger.debug(u"{}: Updating state to {}".format(device.name, value))
     
