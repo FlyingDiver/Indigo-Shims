@@ -64,14 +64,14 @@ class Plugin(indigo.PluginBase):
 
         instanceVers = int(device.pluginProps.get('devVersCount', 0))
         if instanceVers >= kCurDevVersCount:
-            self.logger.debug(u"{}: Device Version is up to date".format(device.name))
+            self.logger.threaddebug(u"{}: Device Version is up to date".format(device.name))
         elif instanceVers < kCurDevVersCount:
             newProps = device.pluginProps
 
             newProps["devVersCount"] = kCurDevVersCount
             device.replacePluginPropsOnServer(newProps)
             device.stateListOrDisplayStateIdChanged()
-            self.logger.debug(u"{}: Updated to version {}".format(device.name, kCurDevVersCount))
+            self.logger.threaddebug(u"{}: Updated to version {}".format(device.name, kCurDevVersCount))
         else:
             self.logger.error(u"{}: Unknown device version: {}".format(device.name. instanceVers))
 
@@ -83,7 +83,10 @@ class Plugin(indigo.PluginBase):
         self.logger.info(u"{}: Stopping Device".format(device.name))
         assert device.id in self.shimDevices
         del self.shimDevices[device.id]
-     
+
+    def didDeviceCommPropertyChange(self, origDev, newDev):
+        return False
+
     def recurseDict(self, key_string, data_dict):
         self.logger.threaddebug(u"recurseDict key_string = {}, data_dict= {}".format(key_string, data_dict))
         try:
@@ -184,44 +187,54 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u"{}: Updating state to {}".format(device.name, value))
     
             if device.pluginProps["shimSensorSubtype"] == "Generic":
+                precision = device.pluginProps.get("shimSensorPrecision", "2")
                 device.updateStateImageOnServer(indigo.kStateImageSel.None)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=2, uiValue=u'{:.2f}'.format(value))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f}'.format(value, prec=precision))
 
             elif device.pluginProps["shimSensorSubtype"] == "Temperature-F":
+                precision = device.pluginProps.get("shimSensorPrecision", "1")
                 device.updateStateImageOnServer(indigo.kStateImageSel.TemperatureSensor)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=1, uiValue=u'{:.1f} °F'.format(value))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} °F'.format(value, prec=precision))
 
             elif device.pluginProps["shimSensorSubtype"] == "Temperature-C":
+                precision = device.pluginProps.get("shimSensorPrecision", "1")
                 device.updateStateImageOnServer(indigo.kStateImageSel.TemperatureSensor)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=1, uiValue=u'{:.1f} °C'.format(value))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} °C'.format(value, prec=precision))
 
             elif device.pluginProps["shimSensorSubtype"] == "Humidity":
+                precision = device.pluginProps.get("shimSensorPrecision", "0")
                 device.updateStateImageOnServer(indigo.kStateImageSel.HumiditySensor)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=0, uiValue=u'{:.0f}%'.format(value))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f}%'.format(value, prec=precision))
 
             elif device.pluginProps["shimSensorSubtype"] == "Pressure-inHg":
+                precision = device.pluginProps.get("shimSensorPrecision", "2")
                 device.updateStateImageOnServer(indigo.kStateImageSel.None)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=2, uiValue=u'{:.2f} inHg'.format(value))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} inHg'.format(value, prec=precision))
 
             elif device.pluginProps["shimSensorSubtype"] == "Pressure-mb":
+                precision = device.pluginProps.get("shimSensorPrecision", "2")
                 device.updateStateImageOnServer(indigo.kStateImageSel.None)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=2, uiValue=u'{:.2f} mb'.format(value))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} mb'.format(value, prec=precision))
 
             elif device.pluginProps["shimSensorSubtype"] == "Power-W":
+                precision = device.pluginProps.get("shimSensorPrecision", "0")
                 device.updateStateImageOnServer(indigo.kStateImageSel.EnergyMeterOn)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=2, uiValue=u'{:.2f} W'.format(value))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} W'.format(value, prec=precision))
 
             elif device.pluginProps["shimSensorSubtype"] == "Luminence":
+                precision = device.pluginProps.get("shimSensorPrecision", "0")
                 device.updateStateImageOnServer(indigo.kStateImageSel.LightSensor)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=0, uiValue=u'{:.0f} lux'.format(value))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} lux'.format(value, prec=precision))
 
             elif device.pluginProps["shimSensorSubtype"] == "Luminence%":
+                precision = device.pluginProps.get("shimSensorPrecision", "0")
                 device.updateStateImageOnServer(indigo.kStateImageSel.LightSensor)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=0, uiValue=u'{:.0f}%'.format(value))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f}%'.format(value, prec=precision))
 
             elif device.pluginProps["shimSensorSubtype"] == "ppm":
+                precision = device.pluginProps.get("shimSensorPrecision", "0")
                 device.updateStateImageOnServer(indigo.kStateImageSel.None)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=0, uiValue=u'{:.0f} ppm'.format(value))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} ppm'.format(value, prec=precision))
 
 
             else:

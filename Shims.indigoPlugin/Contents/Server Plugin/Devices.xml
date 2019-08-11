@@ -287,11 +287,15 @@
                     <Option value="ppm">Concentration (ppm)</Option>
                 </List>
 			</Field>
-            <Field id="state_dict_payload_key" type="textfield" defaultValue=""  visibleBindingId="state_location_payload_type" visibleBindingValue="json">
-                <Label>Multi-States Key:</Label>
+            <Field id="shimSensorPrecision" type="textfield" defaultValue="2">
+                <Label>Precision:</Label>
             </Field>
+            <Field id="devices_separator2" type="separator"/>
             <Field id="state_dict_payload_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="state_location_payload_type" visibleBindingValue="json">
                 <Label>If the payload has a nested dict with multiple entries that should all be states of the device, enter they key(s) for that dict.  If nested entry, enter each key with '.' between.</Label>
+            </Field>
+            <Field id="state_dict_payload_key" type="textfield" defaultValue=""  visibleBindingId="state_location_payload_type" visibleBindingValue="json">
+                <Label>Multi-States Key:</Label>
             </Field>
        </ConfigUI>
     </Device>
