@@ -42,7 +42,7 @@ class Plugin(indigo.PluginBase):
 
 
     def message_handler(self, notification):
-        self.logger.threaddebug(u"received notification of MQTT message type {} from device {}".format(notification["message_type"], notification["brokerID"]))
+        self.logger.debug(u"received notification of MQTT message type {} from device {}".format(notification["message_type"], notification["brokerID"]))
 
         mqttPlugin = indigo.server.getPlugin("com.flyingdiver.indigoplugin.mqtt")
         if not mqttPlugin.isEnabled():
@@ -58,6 +58,7 @@ class Plugin(indigo.PluginBase):
                     brokerID =  int(device.pluginProps['brokerID'])
                     message_data = mqttPlugin.executeAction("fetchQueuedMessage", deviceId=brokerID, props=props, waitUntilDone=True)
                 if message_data != None:
+                    self.logger.debug(u"{}: sending {} to matchAndUpdate: {}".format(device.name, message_type, message_data["payload"]))
                     self.matchAndUpdate(device, message_data)
                     
 
@@ -101,9 +102,11 @@ class Plugin(indigo.PluginBase):
         try:
             if device.pluginProps['uid_location'] == "topic":
                 message_address = message_data["topic_parts"][int(device.pluginProps['uid_location_topic_field'])]
+                self.logger.debug(u"{}: matchAndUpdate topic message_address = {}".format(device.name, message_address))
             elif device.pluginProps['uid_location'] == "payload":
                 payload = json.loads(message_data["payload"])
                 message_address = payload[device.pluginProps['uid_location_payload_key']]
+                self.logger.debug(u"{}: matchAndUpdate json message_address = {}".format(device.name, message_address))
             else:
                 self.logger.debug(u"{}: matchAndUpdate can't determine address location".format(device.name))
                 return
@@ -112,6 +115,7 @@ class Plugin(indigo.PluginBase):
             return
             
         if device.pluginProps['address'] != message_address:
+            self.logger.debug(u"{}: matchAndUpdate address mismatch: {} != {}".format(device.name, device.pluginProps['address'], message_address))
             return
             
         try:
@@ -163,7 +167,7 @@ class Plugin(indigo.PluginBase):
         elif device.deviceTypeId == "shimValueSensor":
             try:
                 value = float(message_value)
-            except ValueError as e:
+            except (TypeError, ValueError) as e:
                 self.logger.error(u"{}: matchAndUpdate unable to convert '{}' to float: {}".format(device.name, message_value, e))
                 return
                 
@@ -223,7 +227,7 @@ class Plugin(indigo.PluginBase):
             states_list = []
             for key in states_dict:
                 new_states.append(key)
-                states_list.append({'key': key, 'value': states_dict[key] })
+                states_list.append({'key': key, 'value': states_dict[key], 'decimalPlaces': 2})
             if old_states != new_states:
                 self.logger.threaddebug(u"{}: matchAndUpdate, new states_list: {}".format(device.name, new_states))
                 newProps = device.pluginProps
