@@ -1,13 +1,10 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 ####################
-## Python to interface with MyQ garage doors.
-## based on https://github.com/Einstein42/myq-garage
 
-import sys
-import time
 import logging
 import json
+import pystache
 
 kCurDevVersCount = 0        # current version of plugin devices
 
@@ -88,14 +85,22 @@ class Plugin(indigo.PluginBase):
         del self.shimDevices[device.id]
      
     def recurseDict(self, key_string, data_dict):
+        self.logger.threaddebug(u"recurseDict key_string = {}, data_dict= {}".format(key_string, data_dict))
         try:
             if '.' not in key_string:
-                return data_dict[key_string]
+                if key_string[0] == '[':
+                    return data_dict[int(key_string[1:-1])]
+                else:
+                    return data_dict[key_string]
             else:
-                s = key_string.split('.', 1)
-                return self.recurseDict(s[1], data_dict[s[0]])
+                split = key_string.split('.', 1)
+                self.logger.threaddebug(u"recurseDict split[0] = {}, split[1] = {}".format(split[0], split[1]))
+                if split[0][0] == '[':
+                    return self.recurseDict(split[1], data_dict[int(split[0][1:-1])])
+                else:
+                    return self.recurseDict(split[1], data_dict[split[0]])
         except Exception as e:
-            self.logger.error(u"recurseDict error {}".format(e))
+            self.logger.error(u"recurseDict error: {}".format(e))
               
     
     def matchAndUpdate(self, device, message_data):    
@@ -137,7 +142,7 @@ class Plugin(indigo.PluginBase):
             self.logger.error(u"{}: matchAndUpdate error determining message value: {}".format(device.name, e))
             return
         
-        if device.deviceTypeId == "shimOnOffSensor":
+        if device.deviceTypeId in ["shimRelay", "shimOnOffSensor"]:
             if message_value in ['Off', 'OFF', False, '0', 0]:
                 value = False
             else:
@@ -170,7 +175,12 @@ class Plugin(indigo.PluginBase):
             except (TypeError, ValueError) as e:
                 self.logger.error(u"{}: matchAndUpdate unable to convert '{}' to float: {}".format(device.name, message_value, e))
                 return
-                
+                           
+            function = device.pluginProps.get("conversionFunction", None)
+            if function:
+                x = value
+                value = eval(function)
+
             self.logger.debug(u"{}: Updating state to {}".format(device.name, value))
     
             if device.pluginProps["shimSensorSubtype"] == "Generic":
@@ -196,6 +206,10 @@ class Plugin(indigo.PluginBase):
             elif device.pluginProps["shimSensorSubtype"] == "Pressure-mb":
                 device.updateStateImageOnServer(indigo.kStateImageSel.None)
                 device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=2, uiValue=u'{:.2f} mb'.format(value))
+
+            elif device.pluginProps["shimSensorSubtype"] == "Power-W":
+                device.updateStateImageOnServer(indigo.kStateImageSel.EnergyMeterOn)
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=2, uiValue=u'{:.2f} W'.format(value))
 
             elif device.pluginProps["shimSensorSubtype"] == "Luminence":
                 device.updateStateImageOnServer(indigo.kStateImageSel.LightSensor)
@@ -254,13 +268,13 @@ class Plugin(indigo.PluginBase):
         for key in add_states:
             stateList.append({  "Disabled"     : False, 
                                 "Key"          : key, 
-                                "StateLabel"   : "",   
-                                "TriggerLabel" : "",   
+                                "StateLabel"   : key,   
+                                "TriggerLabel" : key,   
                                 "Type"         : 150 })
-        return stateList
-                
-                
-      
+        self.logger.threaddebug(u"{}: getDeviceStateList returning: {}".format(device.name, stateList))
+        return stateList 
+    
+
     def getBrokerDevices(self, filter="", valuesDict=None, typeId="", targetId=0):
 
         retList = []
@@ -273,9 +287,51 @@ class Plugin(indigo.PluginBase):
         return retList
 
 
+    ########################################
+    # Device Control methods
+    ########################################
+
+    def actionControlDevice(self, action, device):
+
+        action_template =  device.pluginProps.get("action_template", None)
+        if not action_template:
+            self.logger.error(u"{}: actionControlDevice: no action template".format(device.name))
+            return
+        topic = pystache.render(action_template, {'uniqueID': device.address})
+
+        if action.deviceAction == indigo.kDeviceAction.TurnOn:
+            self.logger.debug(u"{}: actionControlDevice: Turn On".format(device.name))
+            self.publish_topic(device, topic, "On")
+
+        elif action.deviceAction == indigo.kDeviceAction.TurnOff:
+            self.logger.debug(u"{}: actionControlDevice: Turn Off".format(device.name))
+            self.publish_topic(device, topic, "Off")
+
+        elif action.deviceAction == indigo.kDeviceAction.Toggle:
+            self.logger.debug(u"{}: actionControlDevice: Toggle".format(device.name))
+            self.publish_topic(device, topic, "Toggle")
+
+        else:
+            self.logger.error(u"{}: actionControlDevice: Unsupported action requested: {}".format(device.name, action.deviceAction))
+
+    def publish_topic(self, device, topic, payload):
+    
+        mqttPlugin = indigo.server.getPlugin("com.flyingdiver.indigoplugin.mqtt")
+        if not mqttPlugin.isEnabled():
+            self.logger.error(u"MQTT plugin not enabled, publish_topic aborting.")
+            return
+
+        brokerID = int(device.pluginProps['brokerID'])
+        props = { 
+            'topic': topic,
+            'payload': payload,
+            'qos': 0,
+            'retain': 0,
+        }
+        mqttPlugin.executeAction("publish", deviceId=brokerID, props=props, waitUntilDone=False)                    
 
     ########################################
-    # ConfigUI methods
+    # PluginConfig methods
     ########################################
 
     def closedPrefsConfigUi(self, valuesDict, userCancelled):
@@ -285,26 +341,3 @@ class Plugin(indigo.PluginBase):
             except:
                 self.logLevel = logging.INFO
             self.indigo_log_handler.setLevel(self.logLevel)
-
-
-
-
-
-
-    # doesn't do anything, just needed to force other menus to dynamically refresh
-
-    def menuChanged(self, valuesDict, typeId, devId):
-        return valuesDict
-
-    def getDeviceConfigUiValues(self, pluginProps, typeId, devId):
-        self.logger.debug("getDeviceConfigUiValues, typeID = {}".format(typeId))
-        valuesDict = indigo.Dict(pluginProps)
-        errorsDict = indigo.Dict()
-        return (valuesDict, errorsDict)
-
-    def validateDeviceConfigUi(self, valuesDict, typeId, devId):
-        self.logger.debug("validateDeviceConfigUi, typeID = {}".format(typeId))
-        errorsDict = indigo.Dict()
-        if len(errorsDict) > 0:
-            return (False, valuesDict, errorsDict)
-        return (True, valuesDict)
