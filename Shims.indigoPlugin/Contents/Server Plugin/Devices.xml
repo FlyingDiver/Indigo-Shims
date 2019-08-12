@@ -4,10 +4,6 @@
         <Name>Switch Device</Name>
         <ConfigUI>
             <SupportURL>http://forums.indigodomo.com/viewforum.php?f=214</SupportURL>
-			<Field id="SupportsOnState" type="checkbox" defaultValue="true" hidden="true" />
-			<Field id="SupportsSensorValue" type="checkbox" defaultValue="false" hidden="true" />
-			<Field id="SupportsStatusRequest" type="checkbox" defaultValue="true" hidden="true" />
-			
             <Field id="brokerID" type="menu">
                 <Label>MQTT Broker:</Label>
                 <List class="self" filter="" method="getBrokerDevices" dynamicReload="true"/>
@@ -51,7 +47,7 @@
 
             <Field id="devices_separator1" type="separator"/>
 
-            <Field id="state_location" type="menu" defaultValue="topic">
+            <Field id="state_location" type="menu" defaultValue="payload">
         		<Label>State Value Location:</Label>
         		<List>
         			<Option value="topic">Topic Component</Option>
@@ -153,7 +149,7 @@
 
             <Field id="devices_separator1" type="separator"/>
 
-            <Field id="state_location" type="menu" defaultValue="topic">
+            <Field id="state_location" type="menu" defaultValue="payload">
         		<Label>State Value Location:</Label>
         		<List>
         			<Option value="topic">Topic Component</Option>
@@ -244,7 +240,7 @@
 
             <Field id="devices_separator1" type="separator"/>
 
-            <Field id="state_location" type="menu" defaultValue="topic">
+            <Field id="state_location" type="menu" defaultValue="payload">
         		<Label>State Value Location:</Label>
         		<List>
         			<Option value="topic">Topic Component</Option>
