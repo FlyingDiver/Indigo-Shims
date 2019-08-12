@@ -128,6 +128,10 @@ class Plugin(indigo.PluginBase):
             self.logger.error(u"{}: update error determining message value: {}".format(device.name, e))
             return
         
+        if message_value == None:
+            self.logger.debug(u"{}: key {} not found in payload".format(device.name, key))
+            return
+        
         if device.deviceTypeId in ["shimRelay", "shimOnOffSensor"]:
             if message_value in ['Off', 'OFF', False, '0', 0]:
                 value = False
@@ -260,7 +264,7 @@ class Plugin(indigo.PluginBase):
                 if key_string[0] == '[':
                     return data_dict[int(key_string[1:-1])]
                 else:
-                    return data_dict[key_string]
+                    return data_dict.get(key_string, None)
             else:
                 split = key_string.split('.', 1)
                 self.logger.threaddebug(u"recurseDict split[0] = {}, split[1] = {}".format(split[0], split[1]))
