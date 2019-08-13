@@ -4,6 +4,10 @@
         <Name>Switch Device</Name>
         <ConfigUI>
             <SupportURL>http://forums.indigodomo.com/viewforum.php?f=214</SupportURL>
+			<Field id="SupportsOnState" type="checkbox" defaultValue="true" hidden="true" />
+			<Field id="SupportsSensorValue" type="checkbox" defaultValue="false" hidden="true" />
+			<Field id="SupportsStatusRequest" type="checkbox" defaultValue="true" hidden="true" />
+
             <Field id="brokerID" type="menu">
                 <Label>MQTT Broker:</Label>
                 <List class="self" filter="" method="getBrokerDevices" dynamicReload="true"/>
@@ -83,6 +87,99 @@
                     <Option value="MotionSensor">Motion Sensor</Option>
                 </List>
 			</Field>
+
+            <Field id="devices_separator2" type="separator"/>
+
+            <Field id="action_template" type="textfield" defaultValue="cmnd/{{uniqueID}}/Power">
+                <Label>Action Template:
+                </Label>
+            </Field>
+            <Field id="action_template_note" type="label" fontSize="small" fontColor="darkgray" alwaysUseInDialogHeightCalc="true">
+                <Label>See the Wiki for how to use this section.</Label>
+            </Field>
+
+
+       </ConfigUI>
+    </Device>
+
+    <Device id="shimDimmer" type="dimmer">
+        <Name>Dimmer Device</Name>
+        <ConfigUI>
+            <SupportURL>http://forums.indigodomo.com/viewforum.php?f=214</SupportURL>
+			<Field id="SupportsOnState" type="checkbox" defaultValue="false" hidden="true" />
+			<Field id="SupportsSensorValue" type="checkbox" defaultValue="true" hidden="true" />
+			<Field id="SupportsStatusRequest" type="checkbox" defaultValue="true" hidden="true" />
+
+            <Field id="brokerID" type="menu">
+                <Label>MQTT Broker:</Label>
+                <List class="self" filter="" method="getBrokerDevices" dynamicReload="true"/>
+            </Field>
+
+            <Field id="message_type" type="textfield">
+                <Label>Message Type:</Label>
+            </Field>
+            <Field id="message_type_note" type="label" fontSize="small" fontColor="darkgray" >
+                <Label>Must match the Message Type field in the MQTT Plugin's Action.</Label>
+            </Field>
+
+            <Field id="uid_location" type="menu" defaultValue="topic">
+        		<Label>Unique ID Location:</Label>
+        		<List>  
+        			<Option value="topic">Topic Component</Option>
+        			<Option value="payload">Payload Field</Option>
+        		</List>
+        	</Field>
+
+            <Field id="uid_location_topic_field" type="textfield" defaultValue="0"  visibleBindingId="uid_location" visibleBindingValue="topic">
+                <Label>Topic Field:</Label>
+            </Field>
+            <Field id="uid_location_topic_field_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="uid_location" visibleBindingValue="topic">
+                <Label>Enter array index for unique ID component in topic.  0 is first component.</Label>
+            </Field>
+            
+            <Field id="uid_location_payload_key" type="textfield" defaultValue=""  visibleBindingId="uid_location" visibleBindingValue="payload">
+                <Label>Payload Key:</Label>
+            </Field>
+            <Field id="uid_location_payload_key_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="uid_location" visibleBindingValue="payload" alwaysUseInDialogHeightCalc="true">
+                <Label>Enter key for dict entry for unique ID field.  If nested entry, enter each key with '.' between.  For example, "states.did" if the "did" key is inside the "states" dict.</Label>
+            </Field>
+                        
+            <Field id="address" type="textfield"  defaultValue="">
+                <Label>Unique ID Value:</Label>
+            </Field>
+            <Field id="address_note" type="label" fontSize="small" fontColor="darkgray" >
+                <Label>Unique ID value for the MQTT device.</Label>
+            </Field>
+
+            <Field id="devices_separator1" type="separator"/>
+
+            <Field id="state_location" type="menu" defaultValue="payload">
+        		<Label>State Value Location:</Label>
+        		<List>
+        			<Option value="topic">Topic Component</Option>
+        			<Option value="payload">Payload Fields</Option>
+        		</List>
+        	</Field>
+            <Field id="state_location_topic_field" type="textfield" defaultValue="0"  visibleBindingId="state_location" visibleBindingValue="topic">
+                <Label>Topic Field:</Label>
+            </Field>
+            <Field id="state_location_topic_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="state_location" visibleBindingValue="topic">
+                <Label>Enter array index for state component in topic.  0 is first component.</Label>
+            </Field>
+            <Field id="state_location_payload_type" type="menu" defaultValue="json" visibleBindingId="state_location" visibleBindingValue="payload">
+        		<Label>Payload Type:</Label>
+        		<List>
+        			<Option value="json">JSON</Option>
+        			<Option value="raw">Raw</Option>
+        		</List>
+        	</Field>
+        	
+            <Field id="state_location_payload_key" type="textfield" defaultValue=""  visibleBindingId="state_location_payload_type" visibleBindingValue="json">
+                <Label>Payload Key:</Label>
+            </Field>
+            <Field id="state_location_payload_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="state_location_payload_type" visibleBindingValue="json" alwaysUseInDialogHeightCalc="true">
+                <Label>Enter key for dict entry for state field.  If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
+            </Field>
 
             <Field id="devices_separator2" type="separator"/>
 
@@ -192,7 +289,7 @@
         <Name>Value Sensor Device</Name>
         <ConfigUI>
             <SupportURL>http://forums.indigodomo.com/viewforum.php?f=214</SupportURL>
-			<Field id="SupportsOnState" type="checkbox" defaultValue="falses" hidden="true" />
+			<Field id="SupportsOnState" type="checkbox" defaultValue="false" hidden="true" />
 			<Field id="SupportsSensorValue" type="checkbox" defaultValue="true" hidden="true" />
 			<Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" />
             <Field id="states_list" type="list" hidden="true"><List class="self" method="getStateList"/></Field>

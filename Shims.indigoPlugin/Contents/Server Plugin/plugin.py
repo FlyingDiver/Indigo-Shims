@@ -95,7 +95,11 @@ class Plugin(indigo.PluginBase):
                 message_address = message_data["topic_parts"][int(device.pluginProps['uid_location_topic_field'])]
                 self.logger.threaddebug(u"{}: update topic message_address = {}".format(device.name, message_address))
             elif device.pluginProps['uid_location'] == "payload":
-                payload = json.loads(message_data["payload"])
+                try:
+                    payload = json.loads(message_data["payload"])
+                except:
+                    self.logger.debug(u"{}: JSON decode error for uid_location = payload, aborting".format(device.name))
+                    return
                 message_address = payload[device.pluginProps['uid_location_payload_key']]
                 self.logger.debug(u"{}: update json message_address = {}".format(device.name, message_address))
             else:
@@ -108,7 +112,8 @@ class Plugin(indigo.PluginBase):
         if device.pluginProps['address'] != message_address:
             self.logger.debug(u"{}: update address mismatch: {} != {}".format(device.name, device.pluginProps['address'], message_address))
             return
-            
+
+
         try:
             if device.pluginProps['state_location'] == "topic":
                 i = int(device.pluginProps['state_location_topic'])
@@ -116,7 +121,11 @@ class Plugin(indigo.PluginBase):
                 message_value = message_data["topic_parts"][i]
             elif (device.pluginProps['state_location'] == "payload") and (device.pluginProps['state_location_payload_type'] == "json"):
                 key = device.pluginProps['state_location_payload_key']
-                data = json.loads(message_data["payload"])
+                try:
+                    payload = json.loads(message_data["payload"])
+                except:
+                    self.logger.debug(u"{}: JSON decode error for state_location = payload, aborting".format(device.name))
+                    return
                 self.logger.threaddebug(u"{}: update state_location_payload, key = {}".format(device.name, key))
                 message_value = self.recurseDict(key, data)
             elif (device.pluginProps['state_location'] == "payload") and (device.pluginProps['state_location_payload_type'] == "raw"):
@@ -159,7 +168,22 @@ class Plugin(indigo.PluginBase):
                     device.updateStateImageOnServer(indigo.kStateImageSel.PowerOff)
                     
                 
-        elif device.deviceTypeId == "shimValueSensor":
+        elif device.deviceTypeId in ["shimDimmer"]:
+            if message_value.lower() == 'on':
+                newBrightness = 100
+            elif message_value.lower() == 'off':
+                newBrightness = 0
+            else:
+                try:
+                    newBrightness = float(message_value)
+                except (TypeError, ValueError) as e:
+                    self.logger.error(u"{}: update unable to convert '{}' to float: {}".format(device.name, message_value, e))
+                    return
+
+            self.logger.debug(u"{}: Updating brightnessLevel to {}".format(device.name, newBrightness))
+            device.updateStateOnServer(key='brightnessLevel', value=newBrightness)
+            
+        elif device.deviceTypeId in ["shimValueSensor"]:
             try:
                 value = float(message_value)
             except (TypeError, ValueError) as e:
@@ -229,12 +253,16 @@ class Plugin(indigo.PluginBase):
 
 
             else:
-                self.logger.debug(u"{}: update, unknown shimSensorSubtype: {}".format(device.pluginProps["shimSensorSubtype"]))
+                self.logger.debug(u"{}: update, unknown shimSensorSubtype: {}".format(device.name, device.pluginProps["shimSensorSubtype"]))
                 
             states_key = device.pluginProps.get('state_dict_payload_key', None)
             if not states_key:
                 return
-            data = json.loads(message_data["payload"])
+            try:
+                data = json.loads(message_data["payload"])
+            except:
+                self.logger.debug(u"{}: JSON decode error for payload, aborting".format(device.name))
+                return
             self.logger.threaddebug(u"{}: update state_dict_payload_key, key = {}".format(device.name, states_key))
             states_dict = self.recurseDict(states_key, data)
             if not (states_dict and len(states_dict) > 0):
@@ -345,6 +373,12 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u"{}: actionControlDevice: Toggle".format(device.name))
             self.publish_topic(device, topic, "Toggle")
 
+        elif action.deviceAction == indigo.kDeviceAction.SetBrightness:
+            newBrightness = action.actionValue
+            self.logger.debug(u"{}: actionControlDevice: SetBrightness = {}".format(device.name, newBrightness))
+            self.publish_topic(device, topic, str(newBrightness))
+
+
         else:
             self.logger.error(u"{}: actionControlDevice: Unsupported action requested: {}".format(device.name, action.deviceAction))
 
@@ -383,6 +417,7 @@ class Plugin(indigo.PluginBase):
             'retain': 0,
         }
         mqttPlugin.executeAction("publish", deviceId=brokerID, props=props, waitUntilDone=False)                    
+        self.logger.debug(u"{}: publish_topic: {} -> {}".format(device.name, topic, payload))
 
     ########################################
     # PluginConfig methods
