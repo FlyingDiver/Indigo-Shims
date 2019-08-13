@@ -118,18 +118,24 @@ class Plugin(indigo.PluginBase):
             if device.pluginProps['state_location'] == "topic":
                 i = int(device.pluginProps['state_location_topic'])
                 self.logger.threaddebug(u"{}: update state_location_topic = {}".format(device.name, i))
-                message_value = message_data["topic_parts"][i]
+                state_key = 'value'
+                state_data = { state_key : message_data["topic_parts"][i] }
+                
+                
+            elif (device.pluginProps['state_location'] == "payload") and (device.pluginProps['state_location_payload_type'] == "raw"):
+                state_key = 'value'
+                state_data = { state_key : message_data["payload"]}
+
             elif (device.pluginProps['state_location'] == "payload") and (device.pluginProps['state_location_payload_type'] == "json"):
-                key = device.pluginProps['state_location_payload_key']
+                state_key = device.pluginProps['state_location_payload_key']
                 try:
-                    payload = json.loads(message_data["payload"])
+                    state_data = json.loads(message_data["payload"])
                 except:
                     self.logger.debug(u"{}: JSON decode error for state_location = payload, aborting".format(device.name))
                     return
-                self.logger.threaddebug(u"{}: update state_location_payload, key = {}".format(device.name, key))
-                message_value = self.recurseDict(key, data)
-            elif (device.pluginProps['state_location'] == "payload") and (device.pluginProps['state_location_payload_type'] == "raw"):
-                message_value = message_data["payload"]
+                self.logger.threaddebug(u"{}: update state_location_payload, key = {}".format(device.name, state_key))
+                
+                
             else:
                 self.logger.debug(u"{}: update can't determine value location".format(device.name))
             
@@ -137,12 +143,52 @@ class Plugin(indigo.PluginBase):
             self.logger.error(u"{}: update error determining message value: {}".format(device.name, e))
             return
         
-        if message_value == None:
-            self.logger.debug(u"{}: key {} not found in payload".format(device.name, key))
-            return
-        
-        if device.deviceTypeId in ["shimRelay", "shimOnOffSensor"]:
-            if message_value in ['Off', 'OFF', False, '0', 0]:
+        if device.deviceTypeId == "shimRelay":
+            value = self.recurseDict(state_key, state_data)
+            self.logger.debug(u"{}: shimRelay, key = {}, data = {}, value = {}".format(device.name, state_key, state_data, value))
+            if value == None:
+                self.logger.debug(u"{}: state_key {} not found in payload".format(device.name, state_key))
+                return
+                
+            if value.lower() in ['off', 'false', '0']:
+                value = False
+            else:
+                value = True
+            self.logger.debug(u"{}: Updating state to {}".format(device.name, value))
+            device.updateStateOnServer(key='onOffState', value=value)
+
+
+        elif device.deviceTypeId == "shimDimmer":
+            state = self.recurseDict(state_key, state_data)
+            if state == None:
+                self.logger.debug(u"{}: state_key {} not found in payload".format(device.name, state_key))
+                return
+ 
+            value_key = device.pluginProps['value_location_payload_key']
+            value = self.recurseDict(value_key, state_data)
+
+
+            self.logger.debug(u"{}: shimDimmer, state_key = {}, value_key = {}, data = {}, state = {}, value = {}".format(device.name, state_key, value_key, state_data, state, value))
+            newBrightness = state_data.get(value_key, None)
+            if newBrightness != None:
+                self.logger.debug(u"{}: Updating brightnessLevel to {}".format(device.name, newBrightness))
+                device.updateStateOnServer(key='brightnessLevel', value=newBrightness)
+            else:
+                if state.lower() in ['off', 'false', '0']:
+                    state = False
+                else:
+                    state = True
+                self.logger.debug(u"{}: No brightnessLevel, setting onOffState to {}".format(device.name, state))
+                device.updateStateOnServer(key='onOffState', value=state)
+            
+        elif device.deviceTypeId == "shimOnOffSensor":
+            value = self.recurseDict(state_key, state_data)
+            self.logger.debug(u"{}: shimRelay, state_key = {}, data = {}, value = {}".format(device.name, state_key, state_data, value))
+            if value == None:
+                self.logger.debug(u"{}: key {} not found in payload".format(device.name, key))
+                return
+
+            if value in ['Off', 'OFF', False, '0', 0]:
                 value = False
             else:
                 value = True
@@ -168,26 +214,16 @@ class Plugin(indigo.PluginBase):
                     device.updateStateImageOnServer(indigo.kStateImageSel.PowerOff)
                     
                 
-        elif device.deviceTypeId in ["shimDimmer"]:
-            if message_value.lower() == 'on':
-                newBrightness = 100
-            elif message_value.lower() == 'off':
-                newBrightness = 0
-            else:
-                try:
-                    newBrightness = float(message_value)
-                except (TypeError, ValueError) as e:
-                    self.logger.error(u"{}: update unable to convert '{}' to float: {}".format(device.name, message_value, e))
-                    return
-
-            self.logger.debug(u"{}: Updating brightnessLevel to {}".format(device.name, newBrightness))
-            device.updateStateOnServer(key='brightnessLevel', value=newBrightness)
-            
-        elif device.deviceTypeId in ["shimValueSensor"]:
+        elif device.deviceTypeId == "shimValueSensor":
+            value = self.recurseDict(state_key, state_data)
+            self.logger.debug(u"{}: shimRelay, key = {}, data = {}, value = {}".format(device.name, state_key, state_data, value))
+            if value == None:
+                self.logger.debug(u"{}: state_key {} not found in payload".format(device.name, state_keys))
+                return
             try:
-                value = float(message_value)
+                value = float(value)
             except (TypeError, ValueError) as e:
-                self.logger.error(u"{}: update unable to convert '{}' to float: {}".format(device.name, message_value, e))
+                self.logger.error(u"{}: update unable to convert '{}' to float: {}".format(device.name, value, e))
                 return
                            
             function = device.pluginProps.get("adjustmentFunction", None)            

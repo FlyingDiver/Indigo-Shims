@@ -181,6 +181,13 @@
                 <Label>Enter key for dict entry for state field.  If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
             </Field>
 
+            <Field id="value_location_payload_key" type="textfield" defaultValue=""  visibleBindingId="state_location_payload_type" visibleBindingValue="json">
+                <Label>Value Key:</Label>
+            </Field>
+            <Field id="value_location_payload_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="state_location_payload_type" visibleBindingValue="json" alwaysUseInDialogHeightCalc="true">
+                <Label>Enter key for dict entry for value field.  If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
+            </Field>
+
             <Field id="devices_separator2" type="separator"/>
 
             <Field id="action_template" type="textfield" defaultValue="cmnd/{{uniqueID}}/Power">
