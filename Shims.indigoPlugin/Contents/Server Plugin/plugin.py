@@ -261,17 +261,28 @@ class Plugin(indigo.PluginBase):
         self.logger.threaddebug(u"recurseDict key_string = {}, data_dict= {}".format(key_string, data_dict))
         try:
             if '.' not in key_string:
-                if key_string[0] == '[':
-                    return data_dict[int(key_string[1:-1])]
+                try:
+                    if key_string[0] == '[':
+                        new_data = data_dict[int(key_string[1:-1])]
+                    else:
+                        new_data = data_dict.get(key_string, None)
+                except:
+                    return None
                 else:
-                    return data_dict.get(key_string, None)
+                    return new_data
+            
             else:
                 split = key_string.split('.', 1)
                 self.logger.threaddebug(u"recurseDict split[0] = {}, split[1] = {}".format(split[0], split[1]))
-                if split[0][0] == '[':
-                    return self.recurseDict(split[1], data_dict[int(split[0][1:-1])])
+                try:
+                    if split[0][0] == '[':
+                        new_data = data_dict[int(split[0][1:-1])]
+                    else:
+                        new_data = data_dict[split[0]]
+                except:
+                    return None
                 else:
-                    return self.recurseDict(split[1], data_dict[split[0]])
+                    return self.recurseDict(split[1], new_data)
         except Exception as e:
             self.logger.error(u"recurseDict error: {}".format(e))
               
