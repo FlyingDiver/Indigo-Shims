@@ -145,7 +145,7 @@ class Plugin(indigo.PluginBase):
         
         if device.deviceTypeId == "shimRelay":
             value = self.recurseDict(state_key, state_data)
-            self.logger.debug(u"{}: shimRelay, key = {}, data = {}, value = {}".format(device.name, state_key, state_data, value))
+            self.logger.debug(u"{}: shimRelay, state_key = {}, state_data = {}, value = {}".format(device.name, state_key, state_data, value))
             if value == None:
                 self.logger.debug(u"{}: state_key {} not found in payload".format(device.name, state_key))
                 return
@@ -162,12 +162,9 @@ class Plugin(indigo.PluginBase):
             state = self.recurseDict(state_key, state_data)
             if state == None:
                 self.logger.debug(u"{}: state_key {} not found in payload".format(device.name, state_key))
-                return
- 
+                return 
             value_key = device.pluginProps['value_location_payload_key']
             value = self.recurseDict(value_key, state_data)
-
-
             self.logger.debug(u"{}: shimDimmer, state_key = {}, value_key = {}, data = {}, state = {}, value = {}".format(device.name, state_key, value_key, state_data, state, value))
             newBrightness = state_data.get(value_key, None)
             if newBrightness != None:
@@ -183,7 +180,7 @@ class Plugin(indigo.PluginBase):
             
         elif device.deviceTypeId == "shimOnOffSensor":
             value = self.recurseDict(state_key, state_data)
-            self.logger.debug(u"{}: shimRelay, state_key = {}, data = {}, value = {}".format(device.name, state_key, state_data, value))
+            self.logger.debug(u"{}: shimOnOffSensor, state_key = {}, data = {}, value = {}".format(device.name, state_key, state_data, value))
             if value == None:
                 self.logger.debug(u"{}: key {} not found in payload".format(device.name, key))
                 return
@@ -216,9 +213,9 @@ class Plugin(indigo.PluginBase):
                 
         elif device.deviceTypeId == "shimValueSensor":
             value = self.recurseDict(state_key, state_data)
-            self.logger.debug(u"{}: shimRelay, key = {}, data = {}, value = {}".format(device.name, state_key, state_data, value))
+            self.logger.debug(u"{}: shimValueSensor, key = {}, data = {}, value = {}".format(device.name, state_key, state_data, value))
             if value == None:
-                self.logger.debug(u"{}: state_key {} not found in payload".format(device.name, state_keys))
+                self.logger.debug(u"{}: state_key {} not found in payload".format(device.name, state_key))
                 return
             try:
                 value = float(value)
