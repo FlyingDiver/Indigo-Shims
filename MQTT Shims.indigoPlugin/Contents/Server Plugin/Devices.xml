@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <Devices>
     <Device id="shimRelay" type="relay">
-        <Name>Switch Device</Name>
+        <Name>MQTT Switch Device</Name>
         <ConfigUI>
             <SupportURL>http://forums.indigodomo.com/viewforum.php?f=214</SupportURL>
 			<Field id="SupportsOnState" type="checkbox" defaultValue="true" hidden="true" />
@@ -103,7 +103,7 @@
     </Device>
 
     <Device id="shimDimmer" type="dimmer">
-        <Name>Dimmer Device</Name>
+        <Name>MQTT Dimmer Device</Name>
         <ConfigUI>
             <SupportURL>http://forums.indigodomo.com/viewforum.php?f=214</SupportURL>
 			<Field id="SupportsOnState" type="checkbox" defaultValue="false" hidden="true" />
@@ -203,7 +203,7 @@
     </Device>
 
     <Device id="shimOnOffSensor" type="sensor">
-        <Name>On/Off Sensor Device</Name>
+        <Name>MQTT On/Off Sensor Device</Name>
         <ConfigUI>
             <SupportURL>http://forums.indigodomo.com/viewforum.php?f=214</SupportURL>
 			<Field id="SupportsOnState" type="checkbox" defaultValue="true" hidden="true" />
@@ -293,7 +293,7 @@
     </Device>
     
     <Device id="shimValueSensor"  type="sensor">
-        <Name>Value Sensor Device</Name>
+        <Name>MQTT Value Sensor Device</Name>
         <ConfigUI>
             <SupportURL>http://forums.indigodomo.com/viewforum.php?f=214</SupportURL>
 			<Field id="SupportsOnState" type="checkbox" defaultValue="false" hidden="true" />

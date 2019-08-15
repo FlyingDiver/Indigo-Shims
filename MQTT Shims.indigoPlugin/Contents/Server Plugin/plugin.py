@@ -30,12 +30,12 @@ class Plugin(indigo.PluginBase):
 
 
     def startup(self):
-        indigo.server.log(u"Starting Shims")
+        indigo.server.log(u"Starting MQTT Shims")
         self.shimDevices = []
         indigo.server.subscribeToBroadcast(u"com.flyingdiver.indigoplugin.mqtt", u"com.flyingdiver.indigoplugin.mqtt-message_queued", "message_handler")
 
     def shutdown(self):
-        indigo.server.log(u"Shutting down Shims")
+        indigo.server.log(u"Shutting down MQTT Shims")
 
 
     def deviceStartComm(self, device):
@@ -72,7 +72,7 @@ class Plugin(indigo.PluginBase):
 
         mqttPlugin = indigo.server.getPlugin("com.flyingdiver.indigoplugin.mqtt")
         if not mqttPlugin.isEnabled():
-            self.logger.error(u"MQTT plugin not enabled, message_handler aborting.")
+            self.logger.error(u"MQTT Connector plugin not enabled, message_handler aborting.")
             return
         
         message_data = None
