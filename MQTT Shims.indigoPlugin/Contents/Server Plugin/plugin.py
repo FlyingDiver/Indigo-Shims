@@ -5,6 +5,7 @@
 import logging
 import json
 import pystache
+from Queue import Queue, Empty
 
 kCurDevVersCount = 0        # current version of plugin devices
 
@@ -32,7 +33,15 @@ class Plugin(indigo.PluginBase):
     def startup(self):
         indigo.server.log(u"Starting MQTT Shims")
         self.shimDevices = []
+        self.messageTypesWanted = []
+        self.messageQueue = Queue()
+        self.mqttPlugin = indigo.server.getPlugin("com.flyingdiver.indigoplugin.mqtt")
         indigo.server.subscribeToBroadcast(u"com.flyingdiver.indigoplugin.mqtt", u"com.flyingdiver.indigoplugin.mqtt-message_queued", "message_handler")
+
+    def message_handler(self, notification):
+        self.logger.debug(u"received notification of MQTT message type {} from {}".format(notification["message_type"], indigo.devices[int(notification["brokerID"])].name))
+        self.messageQueue.put(notification)
+        
 
     def shutdown(self):
         indigo.server.log(u"Shutting down MQTT Shims")
@@ -56,38 +65,52 @@ class Plugin(indigo.PluginBase):
 
         assert device.id not in self.shimDevices
         self.shimDevices.append(device.id)
+        self.messageTypesWanted.append(device.pluginProps['message_type'])
 
 
     def deviceStopComm(self, device):
         self.logger.info(u"{}: Stopping Device".format(device.name))
         assert device.id in self.shimDevices
         self.shimDevices.remove(device.id)
+        self.messageTypesWanted.remove(device.pluginProps['message_type'])
 
     def didDeviceCommPropertyChange(self, oldDevice, newDevice):
         return False
 
-
-    def message_handler(self, notification):
-        self.logger.debug(u"received notification of MQTT message type {} from {}".format(notification["message_type"], indigo.devices[int(notification["brokerID"])].name))
-
-        mqttPlugin = indigo.server.getPlugin("com.flyingdiver.indigoplugin.mqtt")
-        if not mqttPlugin.isEnabled():
-            self.logger.error(u"MQTT Connector plugin not enabled, message_handler aborting.")
-            return
-        
-        message_data = None
-        for deviceID in self.shimDevices:
-            device = indigo.devices[deviceID]
-            message_type = device.pluginProps['message_type']
-            if notification["message_type"] == message_type:
-                if not message_data:
-                    props = { 'message_type': message_type }
-                    brokerID =  int(device.pluginProps['brokerID'])
-                    message_data = mqttPlugin.executeAction("fetchQueuedMessage", deviceId=brokerID, props=props, waitUntilDone=True)
-                if message_data != None:
-                    self.logger.debug(u"{}: message_handler: '{}' {} -> {}".format(device.name, message_type, '/'.join(message_data["topic_parts"]), message_data["payload"]))
-                    self.update(device, message_data)
+    def runConcurrentThread(self):
+        try:
+            while True:
+                if not self.mqttPlugin.isEnabled():
+                    self.logger.error(u"processMessages: MQTT Connector plugin not enabled, aborting.")
+                    self.sleep(60)
+                else:        
+                    self.processMessages()                
+                    self.sleep(0.1)
                     
+        except self.stopThread:
+            pass        
+            
+
+    def processMessages(self):
+    
+        while not self.messageQueue.empty():
+            notification = self.messageQueue.get()
+            if not notification:
+                return
+            
+            if notification["message_type"] in self.messageTypesWanted:
+                props = { 'message_type': notification["message_type"] }
+                brokerID =  int(notification['brokerID'])
+                while True:
+                    message_data = self.mqttPlugin.executeAction("fetchQueuedMessage", deviceId=brokerID, props=props, waitUntilDone=True)
+                    if message_data == None:
+                        break
+                    for deviceID in self.shimDevices:
+                        device = indigo.devices[deviceID]
+                        if device.pluginProps['message_type'] == notification["message_type"]:
+                            self.logger.debug(u"{}: processMessages: '{}' {} -> {}".format(device.name, notification["message_type"], '/'.join(message_data["topic_parts"]), message_data["payload"]))
+                            self.update(device, message_data)
+
     
     def update(self, device, message_data):    
         try:
@@ -226,7 +249,8 @@ class Plugin(indigo.PluginBase):
             function = device.pluginProps.get("adjustmentFunction", None)            
             self.logger.threaddebug(u"{}: update adjustmentFunction: '{}'".format(device.name, function))
             if function:
-                if 'indigo' in function:
+                prohibited = ['indigo', 'requests', 'pyserial', 'oauthlib']
+                if any(x in function for x in prohibited):
                     self.logger.warning(u"{}: Invalid method in adjustmentFunction: '{}'".format(device.name, function))
                 else:
                     x = value
