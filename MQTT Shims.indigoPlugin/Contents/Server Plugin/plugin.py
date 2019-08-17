@@ -178,7 +178,24 @@ class Plugin(indigo.PluginBase):
             else:
                 value = True
             self.logger.debug(u"{}: Updating state to {}".format(device.name, value))
-            device.updateStateOnServer(key='onOffState', value=value)
+
+            if device.pluginProps["shimSensorSubtype"] == "Generic":
+                device.updateStateOnServer(key='onOffState', value=value)
+                device.updateStateImageOnServer(indigo.kStateImageSel.None)
+
+            elif device.pluginProps["shimSensorSubtype"] == "MotionSensor":
+                device.updateStateOnServer(key='onOffState', value=value)
+                if value:
+                    device.updateStateImageOnServer(indigo.kStateImageSel.MotionSensorTripped)
+                else:
+                    device.updateStateImageOnServer(indigo.kStateImageSel.MotionSensor)
+                
+            elif device.pluginProps["shimSensorSubtype"] == "Power":
+                device.updateStateOnServer(key='onOffState', value=value)
+                if value:
+                    device.updateStateImageOnServer(indigo.kStateImageSel.PowerOn)
+                else:
+                    device.updateStateImageOnServer(indigo.kStateImageSel.PowerOff)
 
 
         elif device.deviceTypeId == "shimDimmer":
