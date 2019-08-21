@@ -5,7 +5,7 @@
 import logging
 import json
 import pystache
-from Queue import Queue, Empty
+from Queue import Queue
 
 kCurDevVersCount = 0        # current version of plugin devices
 
