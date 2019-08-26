@@ -310,12 +310,12 @@ class Plugin(indigo.PluginBase):
                 device.updateStateImageOnServer(indigo.kStateImageSel.EnergyMeterOn)
                 device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} W'.format(value, prec=precision))
 
-            elif device.pluginProps["shimSensorSubtype"] == "Luminence":
+            elif device.pluginProps["shimSensorSubtype"] == "Luminance":
                 precision = device.pluginProps.get("shimSensorPrecision", "0")
                 device.updateStateImageOnServer(indigo.kStateImageSel.LightSensor)
                 device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} lux'.format(value, prec=precision))
 
-            elif device.pluginProps["shimSensorSubtype"] == "Luminence%":
+            elif device.pluginProps["shimSensorSubtype"] == "Luminance%":
                 precision = device.pluginProps.get("shimSensorPrecision", "0")
                 device.updateStateImageOnServer(indigo.kStateImageSel.LightSensor)
                 device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f}%'.format(value, prec=precision))
