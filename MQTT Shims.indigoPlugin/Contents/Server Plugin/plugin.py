@@ -172,16 +172,23 @@ class Plugin(indigo.PluginBase):
             if value == None:
                 self.logger.debug(u"{}: state_key {} not found in payload".format(device.name, state_key))
                 return
-                
-            if value.lower() in ['off', 'false', '0']:
-                value = False
+            
+            on_value = device.pluginProps.get('state_on_value', None)
+            if not on_value:
+                if value.lower() in ['off', 'false', '0']:
+                    value = False
+                else:
+                    value = True
             else:
-                value = True
+                value = (value == on_value)
             self.logger.debug(u"{}: Updating state to {}".format(device.name, value))
 
             if device.pluginProps["shimSensorSubtype"] == "Generic":
                 device.updateStateOnServer(key='onOffState', value=value)
-                device.updateStateImageOnServer(indigo.kStateImageSel.None)
+                if value:
+                    device.updateStateImageOnServer(indigo.kStateImageSel.Sensorn)
+                else:
+                    device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
 
             elif device.pluginProps["shimSensorSubtype"] == "MotionSensor":
                 device.updateStateOnServer(key='onOffState', value=value)
@@ -225,16 +232,22 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(u"{}: key {} not found in payload".format(device.name, key))
                 return
 
-            if value in ['Off', 'OFF', False, '0', 0]:
-                value = False
+            on_value = device.pluginProps.get('state_on_value', None)
+            if not on_value:
+                if value in ['off', 'Off', 'OFF', False, '0', 0]:
+                    value = False
+                else:
+                    value = True
             else:
-                value = True
-
+                value = (value == on_value)
             self.logger.debug(u"{}: Updating state to {}".format(device.name, value))
 
             if device.pluginProps["shimSensorSubtype"] == "Generic":
                 device.updateStateOnServer(key='onOffState', value=value)
-                device.updateStateImageOnServer(indigo.kStateImageSel.None)
+                if value:
+                    device.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
+                else:
+                    device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
 
             elif device.pluginProps["shimSensorSubtype"] == "MotionSensor":
                 device.updateStateOnServer(key='onOffState', value=value)
@@ -282,17 +295,17 @@ class Plugin(indigo.PluginBase):
 
             elif device.pluginProps["shimSensorSubtype"] == "Temperature-F":
                 precision = device.pluginProps.get("shimSensorPrecision", "1")
-                device.updateStateImageOnServer(indigo.kStateImageSel.TemperatureSensor)
+                device.updateStateImageOnServer(indigo.kStateImageSel.TemperatureSensorOn)
                 device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} °F'.format(value, prec=precision))
 
             elif device.pluginProps["shimSensorSubtype"] == "Temperature-C":
                 precision = device.pluginProps.get("shimSensorPrecision", "1")
-                device.updateStateImageOnServer(indigo.kStateImageSel.TemperatureSensor)
+                device.updateStateImageOnServer(indigo.kStateImageSel.TemperatureSensorOn)
                 device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} °C'.format(value, prec=precision))
 
             elif device.pluginProps["shimSensorSubtype"] == "Humidity":
                 precision = device.pluginProps.get("shimSensorPrecision", "0")
-                device.updateStateImageOnServer(indigo.kStateImageSel.HumiditySensor)
+                device.updateStateImageOnServer(indigo.kStateImageSel.HumiditySensorOn)
                 device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f}%'.format(value, prec=precision))
 
             elif device.pluginProps["shimSensorSubtype"] == "Pressure-inHg":
@@ -312,12 +325,12 @@ class Plugin(indigo.PluginBase):
 
             elif device.pluginProps["shimSensorSubtype"] == "Luminance":
                 precision = device.pluginProps.get("shimSensorPrecision", "0")
-                device.updateStateImageOnServer(indigo.kStateImageSel.LightSensor)
+                device.updateStateImageOnServer(indigo.kStateImageSel.LightSensorOn)
                 device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} lux'.format(value, prec=precision))
 
             elif device.pluginProps["shimSensorSubtype"] == "Luminance%":
                 precision = device.pluginProps.get("shimSensorPrecision", "0")
-                device.updateStateImageOnServer(indigo.kStateImageSel.LightSensor)
+                device.updateStateImageOnServer(indigo.kStateImageSel.LightSensorOn)
                 device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f}%'.format(value, prec=precision))
 
             elif device.pluginProps["shimSensorSubtype"] == "ppm":
@@ -339,8 +352,14 @@ class Plugin(indigo.PluginBase):
                 return
             self.logger.threaddebug(u"{}: update state_dict_payload_key, key = {}".format(device.name, states_key))
             states_dict = self.recurseDict(states_key, data)
-            if not (states_dict and len(states_dict) > 0):
-               return
+            if not states_dict:
+                return
+            elif type(states_dict) != dict:
+                self.logger.error(u"{}: Device config error, bad Multi-States Key value: {}".format(device.name, states_key))
+                return
+            elif not len(states_dict) > 0:
+                self.logger.warning(u"{}: Possible device config error, Multi-States Key {} returns empty dict.".format(device.name, states_key))
+                return
              
             old_states =  device.pluginProps.get("states_list", indigo.List())
             new_states = indigo.List()                

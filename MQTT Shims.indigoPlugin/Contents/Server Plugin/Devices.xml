@@ -79,6 +79,13 @@
                 <Label>Enter key for dict entry for state field.  If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
             </Field>
 
+            <Field id="state_on_value" type="textfield" defaultValue="" alwaysUseInDialogHeightCalc="true">
+                <Label>On Value:</Label>
+            </Field>
+            <Field id="state_on_value_note" type="label" fontSize="small" fontColor="darkgray" alwaysUseInDialogHeightCalc="true">
+                <Label>String to match for sensor to be "on".</Label>
+            </Field>
+
     		<Field id="shimSensorSubtype" type="menu" defaultValue="Generic">
 				<Label>Sensor Type:</Label>
                 <List>
@@ -279,6 +286,13 @@
             </Field>
             <Field id="state_location_payload_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="state_location_payload_type" visibleBindingValue="json" alwaysUseInDialogHeightCalc="true">
                 <Label>Enter key for dict entry for state field.  If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
+            </Field>
+
+            <Field id="state_on_value" type="textfield" defaultValue="" alwaysUseInDialogHeightCalc="true">
+                <Label>On Value:</Label>
+            </Field>
+            <Field id="state_on_value_note" type="label" fontSize="small" fontColor="darkgray" alwaysUseInDialogHeightCalc="true">
+                <Label>String to match for sensor to be "on".</Label>
             </Field>
 
     		<Field id="shimSensorSubtype" type="menu" defaultValue="Generic">
