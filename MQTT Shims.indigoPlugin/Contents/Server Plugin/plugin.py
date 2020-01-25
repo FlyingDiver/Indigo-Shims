@@ -421,11 +421,8 @@ class Plugin(indigo.PluginBase):
             return stateList
         add_states =  device.pluginProps.get("states_list", indigo.List())
         for key in add_states:
-            stateList.append({  "Disabled"     : False, 
-                                "Key"          : key, 
-                                "StateLabel"   : key,   
-                                "TriggerLabel" : key,   
-                                "Type"         : 150 })
+            dynamic_state = self.getDeviceStateDictForStringType(unicode(key), unicode(key), unicode(key))
+            stateList.append(dynamic_state)
         self.logger.threaddebug(u"{}: getDeviceStateList returning: {}".format(device.name, stateList))
         return stateList 
     
@@ -456,15 +453,15 @@ class Plugin(indigo.PluginBase):
 
         if action.deviceAction == indigo.kDeviceAction.TurnOn:
             self.logger.debug(u"{}: actionControlDevice: Turn On".format(device.name))
-            self.publish_topic(device, topic, "On")
+            self.publish_topic(device, topic, "on")
 
         elif action.deviceAction == indigo.kDeviceAction.TurnOff:
             self.logger.debug(u"{}: actionControlDevice: Turn Off".format(device.name))
-            self.publish_topic(device, topic, "Off")
+            self.publish_topic(device, topic, "off")
 
         elif action.deviceAction == indigo.kDeviceAction.Toggle:
             self.logger.debug(u"{}: actionControlDevice: Toggle".format(device.name))
-            self.publish_topic(device, topic, "Toggle")
+            self.publish_topic(device, topic, "toggle")
 
         elif action.deviceAction == indigo.kDeviceAction.SetBrightness:
             newBrightness = action.actionValue
