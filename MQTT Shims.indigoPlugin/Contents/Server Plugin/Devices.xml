@@ -105,7 +105,24 @@
                 <Label>See the Wiki for how to use this section.</Label>
             </Field>
 
-
+            <Field id="devices_separator3" type="separator"/>
+            <Field id="reports_battery_status" type="checkbox" defaultValue="false">
+                <Label>Device reports battery status:</Label>
+            </Field>
+            <Field id="battery_payload_type" type="menu" defaultValue="json" visibleBindingId="reports_battery_status" visibleBindingValue="true">
+        		<Label>Payload Type:</Label>
+        		<List>
+        			<Option value="json">JSON</Option>
+        			<Option value="raw">Raw</Option>
+        		</List>
+        	</Field>
+        	
+            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="battery_payload_type" visibleBindingValue="json">
+                <Label>Payload Key:</Label>
+            </Field>
+            <Field id="battery_payload_key_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="battery_payload_type" visibleBindingValue="json" alwaysUseInDialogHeightCalc="true">
+                <Label>Enter key for dict entry for battery field.  If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
+            </Field>
        </ConfigUI>
     </Device>
 
@@ -204,7 +221,24 @@
             <Field id="action_template_note" type="label" fontSize="small" fontColor="darkgray" alwaysUseInDialogHeightCalc="true">
                 <Label>See the Wiki for how to use this section.</Label>
             </Field>
-
+            
+            <Field id="devices_separator3" type="separator"/>
+            <Field id="reports_battery_status" type="checkbox" defaultValue="false">
+                <Label>Device reports battery status:</Label>
+            </Field>
+            <Field id="battery_payload_type" type="menu" defaultValue="json" visibleBindingId="reports_battery_status" visibleBindingValue="true">
+        		<Label>Payload Type:</Label>
+        		<List>
+        			<Option value="json">JSON</Option>
+        			<Option value="raw">Raw</Option>
+        		</List>
+        	</Field>
+            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="battery_payload_type" visibleBindingValue="json">
+                <Label>Payload Key:</Label>
+            </Field>
+            <Field id="battery_payload_key_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="battery_payload_type" visibleBindingValue="json" alwaysUseInDialogHeightCalc="true">
+                <Label>Enter key for dict entry for battery field.  If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
+            </Field>
 
        </ConfigUI>
     </Device>
@@ -303,6 +337,24 @@
                     <Option value="MotionSensor">Motion Sensor</Option>
                 </List>
 			</Field>
+            <Field id="devices_separator3" type="separator"/>
+            <Field id="reports_battery_status" type="checkbox" defaultValue="false">
+                <Label>Device reports battery status:</Label>
+            </Field>
+            <Field id="battery_payload_type" type="menu" defaultValue="json" visibleBindingId="reports_battery_status" visibleBindingValue="true">
+        		<Label>Payload Type:</Label>
+        		<List>
+        			<Option value="json">JSON</Option>
+        			<Option value="raw">Raw</Option>
+        		</List>
+        	</Field>
+        	
+            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="battery_payload_type" visibleBindingValue="json">
+                <Label>Payload Key:</Label>
+            </Field>
+            <Field id="battery_payload_key_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="battery_payload_type" visibleBindingValue="json" alwaysUseInDialogHeightCalc="true">
+                <Label>Enter key for dict entry for battery field.  If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
+            </Field>
        </ConfigUI>
     </Device>
     
@@ -417,6 +469,24 @@
             </Field>
             <Field id="state_dict_payload_key" type="textfield" defaultValue=""  visibleBindingId="state_location_payload_type" visibleBindingValue="json">
                 <Label>Multi-States Key:</Label>
+            </Field>
+            <Field id="devices_separator3" type="separator"/>
+            <Field id="reports_battery_status" type="checkbox" defaultValue="false">
+                <Label>Device reports battery status:</Label>
+            </Field>
+            <Field id="battery_payload_type" type="menu" defaultValue="json" visibleBindingId="reports_battery_status" visibleBindingValue="true">
+        		<Label>Payload Type:</Label>
+        		<List>
+        			<Option value="json">JSON</Option>
+        			<Option value="raw">Raw</Option>
+        		</List>
+        	</Field>
+        	
+            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="battery_payload_type" visibleBindingValue="json">
+                <Label>Payload Key:</Label>
+            </Field>
+            <Field id="battery_payload_key_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="battery_payload_type" visibleBindingValue="json" alwaysUseInDialogHeightCalc="true">
+                <Label>Enter key for dict entry for battery field.  If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
             </Field>
        </ConfigUI>
     </Device>

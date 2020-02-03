@@ -55,13 +55,20 @@ class Plugin(indigo.PluginBase):
             self.logger.threaddebug(u"{}: Device Version is up to date".format(device.name))
         elif instanceVers < kCurDevVersCount:
             newProps = device.pluginProps
-
+            instanceVers = int(device.pluginProps.get('devVersCount', 0))
             newProps["devVersCount"] = kCurDevVersCount
             device.replacePluginPropsOnServer(newProps)
             device.stateListOrDisplayStateIdChanged()
             self.logger.threaddebug(u"{}: Updated to version {}".format(device.name, kCurDevVersCount))
         else:
             self.logger.error(u"{}: Unknown device version: {}".format(device.name. instanceVers))
+
+
+        if bool(device.pluginProps.get('reports_battery_status', False)):
+            newProps = device.pluginProps
+            newProps["configDone"] = True
+            newProps["SupportsBatteryLevel"] = True
+            device.replacePluginPropsOnServer(newProps)
 
         assert device.id not in self.shimDevices
         self.shimDevices.append(device.id)
@@ -75,6 +82,8 @@ class Plugin(indigo.PluginBase):
         self.messageTypesWanted.remove(device.pluginProps['message_type'])
 
     def didDeviceCommPropertyChange(self, oldDevice, newDevice):
+        if oldDevice.pluginProps.get('reports_battery_status', None) != newDevice.pluginProps.get('reports_battery_status', None):
+            return True
         return False
 
     def runConcurrentThread(self):
@@ -166,6 +175,16 @@ class Plugin(indigo.PluginBase):
             self.logger.error(u"{}: update error determining message value: {}".format(device.name, e))
             return
         
+        if bool(device.pluginProps.get('reports_battery_status', False)):
+            if device.pluginProps['battery_payload_type'] == "raw":
+                battery_key = 'battery'
+                state_data[battery_key] = message_data["payload"]
+                
+            elif device.pluginProps['state_location_payload_type'] == "json":
+                battery_key = device.pluginProps['battery_payload_key']
+        else:
+            battery_key = None
+
         if device.deviceTypeId == "shimRelay":
             value = self.recurseDict(state_key, state_data)
             self.logger.debug(u"{}: shimRelay, state_key = {}, state_data = {}, value = {}".format(device.name, state_key, state_data, value))
@@ -204,19 +223,23 @@ class Plugin(indigo.PluginBase):
                 else:
                     device.updateStateImageOnServer(indigo.kStateImageSel.PowerOff)
 
+            if battery_key:
+                battery = self.recurseDict(battery_key, state_data)
+                device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
+
 
         elif device.deviceTypeId == "shimDimmer":
             state = self.recurseDict(state_key, state_data)
             if state == None:
                 self.logger.debug(u"{}: state_key {} not found in payload".format(device.name, state_key))
                 return 
+            self.logger.debug(u"{}: state = {}".format(device.name, state))
             value_key = device.pluginProps['value_location_payload_key']
             value = self.recurseDict(value_key, state_data)
             self.logger.debug(u"{}: shimDimmer, state_key = {}, value_key = {}, data = {}, state = {}, value = {}".format(device.name, state_key, value_key, state_data, state, value))
-            newBrightness = state_data.get(value_key, None)
-            if newBrightness != None:
-                self.logger.debug(u"{}: Updating brightnessLevel to {}".format(device.name, newBrightness))
-                device.updateStateOnServer(key='brightnessLevel', value=newBrightness)
+            if value != None:
+                self.logger.debug(u"{}: Updating brightnessLevel to {}".format(device.name, value))
+                device.updateStateOnServer(key='brightnessLevel', value=value)
             else:
                 if state.lower() in ['off', 'false', '0']:
                     state = False
@@ -224,6 +247,11 @@ class Plugin(indigo.PluginBase):
                     state = True
                 self.logger.debug(u"{}: No brightnessLevel, setting onOffState to {}".format(device.name, state))
                 device.updateStateOnServer(key='onOffState', value=state)
+
+            if battery_key:
+                battery = self.recurseDict(battery_key, state_data)
+                device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
+
             
         elif device.deviceTypeId == "shimOnOffSensor":
             value = self.recurseDict(state_key, state_data)
@@ -263,6 +291,10 @@ class Plugin(indigo.PluginBase):
                 else:
                     device.updateStateImageOnServer(indigo.kStateImageSel.PowerOff)
                     
+            if battery_key:
+                battery = self.recurseDict(battery_key, state_data)
+                device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
+
                 
         elif device.deviceTypeId == "shimValueSensor":
             value = self.recurseDict(state_key, state_data)
@@ -375,6 +407,11 @@ class Plugin(indigo.PluginBase):
                 device.stateListOrDisplayStateIdChanged()    
             device.updateStatesOnServer(states_list)
 
+            if battery_key:
+                battery = self.recurseDict(battery_key, state_data)
+                device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
+
+
         else:
             self.logger.warning(u"{}: Invalid device type: {}".format(device.name, device.deviceTypeId))
             
@@ -432,7 +469,9 @@ class Plugin(indigo.PluginBase):
         retList = []
         devicePlugin = valuesDict.get("devicePlugin", None)
         for dev in indigo.devices.iter():
-            if dev.protocol == indigo.kProtocol.Plugin and dev.pluginId == "com.flyingdiver.indigoplugin.mqtt":
+            if dev.protocol == indigo.kProtocol.Plugin and \
+                dev.pluginId == "com.flyingdiver.indigoplugin.mqtt" and \
+                dev.deviceTypeId != 'aggregator' :
                 retList.append((dev.id, dev.name))
 
         retList.sort(key=lambda tup: tup[1])
