@@ -104,8 +104,15 @@
             <Field id="action_template_note" type="label" fontSize="small" fontColor="darkgray" alwaysUseInDialogHeightCalc="true">
                 <Label>See the Wiki for how to use this section.</Label>
             </Field>
-
             <Field id="devices_separator3" type="separator"/>
+            <Field id="state_dict_payload_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="state_location_payload_type" visibleBindingValue="json">
+                <Label>If the payload has a nested dict with multiple entries that should all be states of the device, enter they key(s) for that dict.  If nested entry, enter each key with '.' between.</Label>
+            </Field>
+            <Field id="state_dict_payload_key" type="textfield" defaultValue=""  visibleBindingId="state_location_payload_type" visibleBindingValue="json">
+                <Label>Multi-States Key:</Label>
+            </Field>
+
+            <Field id="devices_separator4" type="separator"/>
             <Field id="reports_battery_status" type="checkbox" defaultValue="false">
                 <Label>Device reports battery status:</Label>
             </Field>
@@ -221,8 +228,14 @@
             <Field id="action_template_note" type="label" fontSize="small" fontColor="darkgray" alwaysUseInDialogHeightCalc="true">
                 <Label>See the Wiki for how to use this section.</Label>
             </Field>
-            
-            <Field id="devices_separator3" type="separator"/>
+             <Field id="devices_separator3" type="separator"/>
+            <Field id="state_dict_payload_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="state_location_payload_type" visibleBindingValue="json">
+                <Label>If the payload has a nested dict with multiple entries that should all be states of the device, enter they key(s) for that dict.  If nested entry, enter each key with '.' between.</Label>
+            </Field>
+            <Field id="state_dict_payload_key" type="textfield" defaultValue=""  visibleBindingId="state_location_payload_type" visibleBindingValue="json">
+                <Label>Multi-States Key:</Label>
+            </Field>           
+            <Field id="devices_separator4" type="separator"/>
             <Field id="reports_battery_status" type="checkbox" defaultValue="false">
                 <Label>Device reports battery status:</Label>
             </Field>
@@ -337,6 +350,13 @@
                     <Option value="MotionSensor">Motion Sensor</Option>
                 </List>
 			</Field>
+            <Field id="devices_separator2" type="separator"/>
+            <Field id="state_dict_payload_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="state_location_payload_type" visibleBindingValue="json">
+                <Label>If the payload has a nested dict with multiple entries that should all be states of the device, enter they key(s) for that dict.  If nested entry, enter each key with '.' between.</Label>
+            </Field>
+            <Field id="state_dict_payload_key" type="textfield" defaultValue=""  visibleBindingId="state_location_payload_type" visibleBindingValue="json">
+                <Label>Multi-States Key:</Label>
+            </Field>
             <Field id="devices_separator3" type="separator"/>
             <Field id="reports_battery_status" type="checkbox" defaultValue="false">
                 <Label>Device reports battery status:</Label>
@@ -348,7 +368,6 @@
         			<Option value="raw">Raw</Option>
         		</List>
         	</Field>
-        	
             <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="battery_payload_type" visibleBindingValue="json">
                 <Label>Payload Key:</Label>
             </Field>
@@ -481,7 +500,6 @@
         			<Option value="raw">Raw</Option>
         		</List>
         	</Field>
-        	
             <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="battery_payload_type" visibleBindingValue="json">
                 <Label>Payload Key:</Label>
             </Field>

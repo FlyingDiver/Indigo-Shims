@@ -227,6 +227,39 @@ class Plugin(indigo.PluginBase):
                 battery = self.recurseDict(battery_key, state_data)
                 device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
 
+            states_key = device.pluginProps.get('state_dict_payload_key', None)
+            if not states_key:
+                return
+            try:
+                data = json.loads(message_data["payload"])
+            except:
+                self.logger.debug(u"{}: JSON decode error for payload, aborting".format(device.name))
+                return
+            self.logger.threaddebug(u"{}: update state_dict_payload_key, key = {}".format(device.name, states_key))
+            states_dict = self.recurseDict(states_key, data)
+            if not states_dict:
+                return
+            elif type(states_dict) != dict:
+                self.logger.error(u"{}: Device config error, bad Multi-States Key value: {}".format(device.name, states_key))
+                return
+            elif not len(states_dict) > 0:
+                self.logger.warning(u"{}: Possible device config error, Multi-States Key {} returns empty dict.".format(device.name, states_key))
+                return
+             
+            old_states =  device.pluginProps.get("states_list", indigo.List())
+            new_states = indigo.List()                
+            states_list = []
+            for key in states_dict:
+                new_states.append(key)
+                states_list.append({'key': key, 'value': states_dict[key], 'decimalPlaces': 2})
+            if old_states != new_states:
+                self.logger.threaddebug(u"{}: update, new states_list: {}".format(device.name, new_states))
+                newProps = device.pluginProps
+                newProps["states_list"] = new_states
+                device.replacePluginPropsOnServer(newProps)
+                device.stateListOrDisplayStateIdChanged()    
+            device.updateStatesOnServer(states_list)
+
 
         elif device.deviceTypeId == "shimDimmer":
             state = self.recurseDict(state_key, state_data)
@@ -251,6 +284,39 @@ class Plugin(indigo.PluginBase):
             if battery_key:
                 battery = self.recurseDict(battery_key, state_data)
                 device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
+
+            states_key = device.pluginProps.get('state_dict_payload_key', None)
+            if not states_key:
+                return
+            try:
+                data = json.loads(message_data["payload"])
+            except:
+                self.logger.debug(u"{}: JSON decode error for payload, aborting".format(device.name))
+                return
+            self.logger.threaddebug(u"{}: update state_dict_payload_key, key = {}".format(device.name, states_key))
+            states_dict = self.recurseDict(states_key, data)
+            if not states_dict:
+                return
+            elif type(states_dict) != dict:
+                self.logger.error(u"{}: Device config error, bad Multi-States Key value: {}".format(device.name, states_key))
+                return
+            elif not len(states_dict) > 0:
+                self.logger.warning(u"{}: Possible device config error, Multi-States Key {} returns empty dict.".format(device.name, states_key))
+                return
+             
+            old_states =  device.pluginProps.get("states_list", indigo.List())
+            new_states = indigo.List()                
+            states_list = []
+            for key in states_dict:
+                new_states.append(key)
+                states_list.append({'key': key, 'value': states_dict[key], 'decimalPlaces': 2})
+            if old_states != new_states:
+                self.logger.threaddebug(u"{}: update, new states_list: {}".format(device.name, new_states))
+                newProps = device.pluginProps
+                newProps["states_list"] = new_states
+                device.replacePluginPropsOnServer(newProps)
+                device.stateListOrDisplayStateIdChanged()    
+            device.updateStatesOnServer(states_list)
 
             
         elif device.deviceTypeId == "shimOnOffSensor":
@@ -290,10 +356,43 @@ class Plugin(indigo.PluginBase):
                     device.updateStateImageOnServer(indigo.kStateImageSel.PowerOn)
                 else:
                     device.updateStateImageOnServer(indigo.kStateImageSel.PowerOff)
-                    
+
             if battery_key:
                 battery = self.recurseDict(battery_key, state_data)
                 device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
+                    
+            states_key = device.pluginProps.get('state_dict_payload_key', None)
+            if not states_key:
+                return
+            try:
+                data = json.loads(message_data["payload"])
+            except:
+                self.logger.debug(u"{}: JSON decode error for payload, aborting".format(device.name))
+                return
+            self.logger.threaddebug(u"{}: update state_dict_payload_key, key = {}".format(device.name, states_key))
+            states_dict = self.recurseDict(states_key, data)
+            if not states_dict:
+                return
+            elif type(states_dict) != dict:
+                self.logger.error(u"{}: Device config error, bad Multi-States Key value: {}".format(device.name, states_key))
+                return
+            elif not len(states_dict) > 0:
+                self.logger.warning(u"{}: Possible device config error, Multi-States Key {} returns empty dict.".format(device.name, states_key))
+                return
+             
+            old_states =  device.pluginProps.get("states_list", indigo.List())
+            new_states = indigo.List()                
+            states_list = []
+            for key in states_dict:
+                new_states.append(key)
+                states_list.append({'key': key, 'value': states_dict[key], 'decimalPlaces': 2})
+            if old_states != new_states:
+                self.logger.threaddebug(u"{}: update, new states_list: {}".format(device.name, new_states))
+                newProps = device.pluginProps
+                newProps["states_list"] = new_states
+                device.replacePluginPropsOnServer(newProps)
+                device.stateListOrDisplayStateIdChanged()    
+            device.updateStatesOnServer(states_list)
 
                 
         elif device.deviceTypeId == "shimValueSensor":
@@ -373,6 +472,11 @@ class Plugin(indigo.PluginBase):
 
             else:
                 self.logger.debug(u"{}: update, unknown shimSensorSubtype: {}".format(device.name, device.pluginProps["shimSensorSubtype"]))
+
+            if battery_key:
+                battery = self.recurseDict(battery_key, state_data)
+                device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
+
                 
             states_key = device.pluginProps.get('state_dict_payload_key', None)
             if not states_key:
@@ -406,10 +510,6 @@ class Plugin(indigo.PluginBase):
                 device.replacePluginPropsOnServer(newProps)
                 device.stateListOrDisplayStateIdChanged()    
             device.updateStatesOnServer(states_list)
-
-            if battery_key:
-                battery = self.recurseDict(battery_key, state_data)
-                device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
 
 
         else:
@@ -454,8 +554,6 @@ class Plugin(indigo.PluginBase):
 
     def getDeviceStateList(self, device):
         stateList = indigo.PluginBase.getDeviceStateList(self, device)
-        if device.deviceTypeId != "shimValueSensor":
-            return stateList
         add_states =  device.pluginProps.get("states_list", indigo.List())
         for key in add_states:
             dynamic_state = self.getDeviceStateDictForStringType(unicode(key), unicode(key), unicode(key))
