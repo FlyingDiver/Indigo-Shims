@@ -518,7 +518,10 @@ class Plugin(indigo.PluginBase):
     def recurseDict(self, key_string, data_dict):
         self.logger.threaddebug(u"recurseDict key_string = {}, data_dict= {}".format(key_string, data_dict))
         try:
-            if '.' not in key_string:
+            if key_string == u'.':
+                return data_dict
+                
+            elif '.' not in key_string:
                 try:
                     if key_string[0] == '[':
                         new_data = data_dict[int(key_string[1:-1])]
