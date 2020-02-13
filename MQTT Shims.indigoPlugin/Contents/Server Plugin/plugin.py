@@ -138,7 +138,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(u"{}: update can't determine address location".format(device.name))
                 return
         except Exception as e:
-            self.logger.error(u"{}: update error determining device address field: {}".format(device.name, e))
+            self.logger.error(u"{}: Failed to find Unique ID in '{}': {}".format(device.name, device.pluginProps['uid_location'], e))
             return
             
         if device.pluginProps['address'] != message_address:
