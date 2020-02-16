@@ -101,6 +101,14 @@
                 <Label>Action Template:
                 </Label>
             </Field>
+            <Field id="on_action_payload" type="textfield" defaultValue="on">
+                <Label>On Action Payload:
+                </Label>
+            </Field>
+            <Field id="off_action_payload" type="textfield" defaultValue="off">
+                <Label>Off Action Payload:
+                </Label>
+            </Field>
             <Field id="action_template_note" type="label" fontSize="small" fontColor="darkgray" alwaysUseInDialogHeightCalc="true">
                 <Label>See the Wiki for how to use this section.</Label>
             </Field>
@@ -222,7 +230,23 @@
             <Field id="devices_separator2" type="separator"/>
 
             <Field id="action_template" type="textfield" defaultValue="cmnd/{{uniqueID}}/Power">
-                <Label>Action Template:
+                <Label>On/Off Action Topic Template:
+                </Label>
+            </Field>
+            <Field id="on_action_payload" type="textfield" defaultValue="on">
+                <Label>On Action Payload:
+                </Label>
+            </Field>
+            <Field id="off_action_payload" type="textfield" defaultValue="off">
+                <Label>Off Action Payload:
+                </Label>
+            </Field>
+            <Field id="dimmer_action_template" type="textfield" defaultValue="cmnd/{{uniqueID}}/set">
+                <Label>Dimmer Action Topic Template:
+                </Label>
+            </Field>
+            <Field id="dimmer_action_payload" type="textfield" defaultValue="{'turn': 'on', 'brightness': {{brightness}} }">
+                <Label>Dimmer Action Payload:
                 </Label>
             </Field>
             <Field id="action_template_note" type="label" fontSize="small" fontColor="darkgray" alwaysUseInDialogHeightCalc="true">

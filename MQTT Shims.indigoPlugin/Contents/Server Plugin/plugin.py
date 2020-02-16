@@ -585,29 +585,44 @@ class Plugin(indigo.PluginBase):
 
     def actionControlDevice(self, action, device):
 
-        action_template =  device.pluginProps.get("action_template", None)
-        if not action_template:
-            self.logger.error(u"{}: actionControlDevice: no action template".format(device.name))
-            return
-        topic = pystache.render(action_template, {'uniqueID': device.address})
-
         if action.deviceAction == indigo.kDeviceAction.TurnOn:
-            self.logger.debug(u"{}: actionControlDevice: Turn On".format(device.name))
-            self.publish_topic(device, topic, "on")
+            action_template =  device.pluginProps.get("action_template", None)
+            if not action_template:
+                self.logger.error(u"{}: actionControlDevice: no action template".format(device.name))
+                return
+                
+            payload =  device.pluginProps.get("on_action_payload", "on")
+            topic = pystache.render(action_template, {'uniqueID': device.address})
+            self.logger.debug(u"{}: actionControlDevice: sending topic = '{}', payload = '{}'".format(device.name, topic, payload))
+            self.publish_topic(device, topic, payload)
 
         elif action.deviceAction == indigo.kDeviceAction.TurnOff:
-            self.logger.debug(u"{}: actionControlDevice: Turn Off".format(device.name))
-            self.publish_topic(device, topic, "off")
+            action_template =  device.pluginProps.get("action_template", None)
+            if not action_template:
+                self.logger.error(u"{}: actionControlDevice: no action template".format(device.name))
+                return
 
-        elif action.deviceAction == indigo.kDeviceAction.Toggle:
-            self.logger.debug(u"{}: actionControlDevice: Toggle".format(device.name))
-            self.publish_topic(device, topic, "toggle")
+            payload =  device.pluginProps.get("off_action_payload", "off")
+            topic = pystache.render(action_template, {'uniqueID': device.address})
+            self.logger.debug(u"{}: actionControlDevice: sending topic = '{}', payload = '{}'".format(device.name, topic, payload))
+            self.publish_topic(device, topic, payload)
 
         elif action.deviceAction == indigo.kDeviceAction.SetBrightness:
             newBrightness = action.actionValue
-            self.logger.debug(u"{}: actionControlDevice: SetBrightness = {}".format(device.name, newBrightness))
-            self.publish_topic(device, topic, str(newBrightness))
 
+            action_template =  device.pluginProps.get("dimmer_action_template", None)
+            if not action_template:
+                self.logger.error(u"{}: actionControlDevice: no action template".format(device.name))
+                return
+            payload_template =  device.pluginProps.get("dimmer_action_payload", None)
+            if not payload_template:
+                self.logger.error(u"{}: actionControlDevice: no payload template".format(device.name))
+                return
+
+            topic = pystache.render(action_template, {'uniqueID': device.address})
+            payload = pystache.render(payload_template, {'brightness': newBrightness})
+            self.logger.debug(u"{}: actionControlDevice: sending topic = '{}', payload = '{}'".format(device.name, topic, payload))
+            self.publish_topic(device, topic, payload)
 
         else:
             self.logger.error(u"{}: actionControlDevice: Unsupported action requested: {}".format(device.name, action.deviceAction))
