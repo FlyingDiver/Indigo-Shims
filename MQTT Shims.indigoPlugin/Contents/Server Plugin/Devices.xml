@@ -363,7 +363,7 @@
                 <Label>On Value:</Label>
             </Field>
             <Field id="state_on_value_note" type="label" fontSize="small" fontColor="darkgray" alwaysUseInDialogHeightCalc="true">
-                <Label>String to match for sensor to be "on".</Label>
+                <Label>String to match for sensor to be "on".  If the sensor reports a JSON boolean value, leave this blank. </Label>
             </Field>
 
     		<Field id="shimSensorSubtype" type="menu" defaultValue="Generic">
