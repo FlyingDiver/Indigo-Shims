@@ -322,9 +322,6 @@ class Plugin(indigo.PluginBase):
         elif device.deviceTypeId == "shimOnOffSensor":
             value = self.recurseDict(state_key, state_data)
             self.logger.debug(u"{}: shimOnOffSensor, state_key = {}, data = {}, value = {}".format(device.name, state_key, state_data, value))
-            if value == None:
-                self.logger.debug(u"{}: key {} not found in payload".format(device.name, key))
-                return
 
             on_value = device.pluginProps.get('state_on_value', None)
             if not on_value:
