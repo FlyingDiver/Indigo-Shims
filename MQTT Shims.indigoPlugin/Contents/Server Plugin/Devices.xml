@@ -533,4 +533,76 @@
        </ConfigUI>
     </Device>
     
+    <Device id="shimGeneric"  type="custom">
+        <Name>MQTT Generic JSON Device</Name>
+        <ConfigUI>
+            <SupportURL>http://forums.indigodomo.com/viewforum.php?f=214</SupportURL>
+			<Field id="SupportsOnState" type="checkbox" defaultValue="false" hidden="true" />
+			<Field id="SupportsSensorValue" type="checkbox" defaultValue="false" hidden="true" />
+			<Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" />
+            <Field id="states_list" type="list" hidden="true"><List class="self" method="getStateList"/></Field>
+            <Field id="state_location" type="textfield" defaultValue="payload" hidden="true" />
+            <Field id="state_location_payload_type" type="textfield" defaultValue="json" hidden="true" />
+			
+            <Field id="brokerID" type="menu">
+                <Label>MQTT Broker:</Label>
+                <List class="self" filter="" method="getBrokerDevices" dynamicReload="true"/>
+            </Field>
+
+            <Field id="message_type" type="textfield">
+                <Label>Message Type:</Label>
+            </Field>
+            <Field id="message_type_note" type="label" fontSize="small" fontColor="darkgray" >
+                <Label>Must match the Message Type field in the MQTT Plugin's Action.</Label>
+            </Field>
+
+            <Field id="uid_location" type="menu" defaultValue="topic">
+        		<Label>Unique ID Location:</Label>
+        		<List>  
+        			<Option value="topic">Topic Component</Option>
+        			<Option value="payload">Payload Field</Option>
+        		</List>
+        	</Field>
+
+            <Field id="uid_location_topic_field" type="textfield" defaultValue="0"  visibleBindingId="uid_location" visibleBindingValue="topic">
+                <Label>Topic Field:</Label>
+            </Field>
+            <Field id="uid_location_topic_field_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="uid_location" visibleBindingValue="topic">
+                <Label>Enter array index for unique ID component in topic.  0 is first component.</Label>
+            </Field>
+            
+            <Field id="uid_location_payload_key" type="textfield" defaultValue=""  visibleBindingId="uid_location" visibleBindingValue="payload">
+                <Label>Payload Key:</Label>
+            </Field>
+            <Field id="uid_location_payload_key_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="uid_location" visibleBindingValue="payload" alwaysUseInDialogHeightCalc="true">
+                <Label>Enter key for dict entry for unique ID field.  If nested entry, enter each key with '.' between.  For example, "states.did" if the "did" key is inside the "states" dict.</Label>
+            </Field>
+                        
+            <Field id="address" type="textfield"  defaultValue="">
+                <Label>Unique ID Value:</Label>
+            </Field>
+            <Field id="address_note" type="label" fontSize="small" fontColor="darkgray" >
+                <Label>Unique ID value for the MQTT device.</Label>
+            </Field>
+
+            <Field id="devices_separator1" type="separator"/>
+            <Field id="state_dict_payload_key" type="textfield" defaultValue="">
+                <Label>Multi-States Key:</Label>
+            </Field>
+            <Field id="state_dict_payload_note" type="label" fontSize="small" fontColor="darkgray">
+                <Label>Enter the key(s) for the dict containing the device states.  If top level, enter '.'.  If nested entry, enter each key with '.' between.</Label>
+            </Field>
+            <Field id="devices_separator3" type="separator"/>
+            <Field id="reports_battery_status" type="checkbox" defaultValue="false">
+                <Label>Device reports battery status:</Label>
+            </Field>
+            <Field id="battery_payload_key" type="textfield" defaultValue="">
+                <Label>Payload Key:</Label>
+            </Field>
+            <Field id="battery_payload_key_note" type="label" fontSize="small" fontColor="darkgray">
+                <Label>Enter key for dict entry for battery field.  If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
+            </Field>
+       </ConfigUI>
+    </Device>
+    
 </Devices>
