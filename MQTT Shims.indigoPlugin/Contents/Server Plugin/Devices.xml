@@ -123,20 +123,24 @@
             <Field id="devices_separator4" type="separator"/>
             <Field id="reports_battery_status" type="checkbox" defaultValue="false">
                 <Label>Device reports battery status:</Label>
+            </Field>        	
+            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="reports_battery_status" visibleBindingValue="true">
+                <Label>Battery Payload Key:</Label>
             </Field>
-            <Field id="battery_payload_type" type="menu" defaultValue="json" visibleBindingId="reports_battery_status" visibleBindingValue="true">
-        		<Label>Payload Type:</Label>
-        		<List>
-        			<Option value="json">JSON</Option>
-        			<Option value="raw">Raw</Option>
-        		</List>
-        	</Field>
-        	
-            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="battery_payload_type" visibleBindingValue="json">
-                <Label>Payload Key:</Label>
+            <Field id="SupportsEnergyMeter" type="checkbox" defaultValue="false">
+                <Label>Device reports energy usage:</Label>
             </Field>
-            <Field id="battery_payload_key_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="battery_payload_type" visibleBindingValue="json" alwaysUseInDialogHeightCalc="true">
-                <Label>Enter key for dict entry for battery field.  If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
+            <Field id="energy_payload_key" type="textfield" defaultValue=""  visibleBindingId="SupportsEnergyMeter" visibleBindingValue="true">
+                <Label>Energy Payload Key:</Label>
+            </Field>
+            <Field id="SupportsEnergyMeterCurPower" type="checkbox" defaultValue="false">
+                <Label>Device reports power load:</Label>
+            </Field>
+            <Field id="power_payload_key" type="textfield" defaultValue=""  visibleBindingId="SupportsEnergyMeterCurPower" visibleBindingValue="true">
+                <Label>Power Payload Key:</Label>
+            </Field>
+            <Field id="extras_payload_key_note" type="label" fontSize="small" fontColor="darkgray" alwaysUseInDialogHeightCalc="true">
+                <Label>Payload Keys - If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
             </Field>
        </ConfigUI>
     </Device>
@@ -262,19 +266,24 @@
             <Field id="devices_separator4" type="separator"/>
             <Field id="reports_battery_status" type="checkbox" defaultValue="false">
                 <Label>Device reports battery status:</Label>
+            </Field>        	
+            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="reports_battery_status" visibleBindingValue="true">
+                <Label>Battery Payload Key:</Label>
             </Field>
-            <Field id="battery_payload_type" type="menu" defaultValue="json" visibleBindingId="reports_battery_status" visibleBindingValue="true">
-        		<Label>Payload Type:</Label>
-        		<List>
-        			<Option value="json">JSON</Option>
-        			<Option value="raw">Raw</Option>
-        		</List>
-        	</Field>
-            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="battery_payload_type" visibleBindingValue="json">
-                <Label>Payload Key:</Label>
+            <Field id="SupportsEnergyMeter" type="checkbox" defaultValue="false">
+                <Label>Device reports energy usage:</Label>
             </Field>
-            <Field id="battery_payload_key_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="battery_payload_type" visibleBindingValue="json" alwaysUseInDialogHeightCalc="true">
-                <Label>Enter key for dict entry for battery field.  If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
+            <Field id="energy_payload_key" type="textfield" defaultValue=""  visibleBindingId="SupportsEnergyMeter" visibleBindingValue="true">
+                <Label>Energy Payload Key:</Label>
+            </Field>
+            <Field id="SupportsEnergyMeterCurPower" type="checkbox" defaultValue="false">
+                <Label>Device reports power load:</Label>
+            </Field>
+            <Field id="power_payload_key" type="textfield" defaultValue=""  visibleBindingId="SupportsEnergyMeterCurPower" visibleBindingValue="true">
+                <Label>Power Payload Key:</Label>
+            </Field>
+            <Field id="extras_payload_key_note" type="label" fontSize="small" fontColor="darkgray" alwaysUseInDialogHeightCalc="true">
+                <Label>Payload Keys - If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
             </Field>
 
        </ConfigUI>
@@ -381,22 +390,27 @@
             <Field id="state_dict_payload_key" type="textfield" defaultValue=""  visibleBindingId="state_location_payload_type" visibleBindingValue="json">
                 <Label>Multi-States Key:</Label>
             </Field>
-            <Field id="devices_separator3" type="separator"/>
+            <Field id="devices_separator4" type="separator"/>
             <Field id="reports_battery_status" type="checkbox" defaultValue="false">
                 <Label>Device reports battery status:</Label>
+            </Field>        	
+            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="reports_battery_status" visibleBindingValue="true">
+                <Label>Battery Payload Key:</Label>
             </Field>
-            <Field id="battery_payload_type" type="menu" defaultValue="json" visibleBindingId="reports_battery_status" visibleBindingValue="true">
-        		<Label>Payload Type:</Label>
-        		<List>
-        			<Option value="json">JSON</Option>
-        			<Option value="raw">Raw</Option>
-        		</List>
-        	</Field>
-            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="battery_payload_type" visibleBindingValue="json">
-                <Label>Payload Key:</Label>
+            <Field id="SupportsEnergyMeter" type="checkbox" defaultValue="false">
+                <Label>Device reports energy usage:</Label>
             </Field>
-            <Field id="battery_payload_key_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="battery_payload_type" visibleBindingValue="json" alwaysUseInDialogHeightCalc="true">
-                <Label>Enter key for dict entry for battery field.  If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
+            <Field id="energy_payload_key" type="textfield" defaultValue=""  visibleBindingId="SupportsEnergyMeter" visibleBindingValue="true">
+                <Label>Energy Payload Key:</Label>
+            </Field>
+            <Field id="SupportsEnergyMeterCurPower" type="checkbox" defaultValue="false">
+                <Label>Device reports power load:</Label>
+            </Field>
+            <Field id="power_payload_key" type="textfield" defaultValue=""  visibleBindingId="SupportsEnergyMeterCurPower" visibleBindingValue="true">
+                <Label>Power Payload Key:</Label>
+            </Field>
+            <Field id="extras_payload_key_note" type="label" fontSize="small" fontColor="darkgray" alwaysUseInDialogHeightCalc="true">
+                <Label>Payload Keys - If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
             </Field>
        </ConfigUI>
     </Device>
@@ -513,22 +527,27 @@
             <Field id="state_dict_payload_key" type="textfield" defaultValue=""  visibleBindingId="state_location_payload_type" visibleBindingValue="json">
                 <Label>Multi-States Key:</Label>
             </Field>
-            <Field id="devices_separator3" type="separator"/>
+            <Field id="devices_separator4" type="separator"/>
             <Field id="reports_battery_status" type="checkbox" defaultValue="false">
                 <Label>Device reports battery status:</Label>
+            </Field>        	
+            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="reports_battery_status" visibleBindingValue="true">
+                <Label>Battery Payload Key:</Label>
             </Field>
-            <Field id="battery_payload_type" type="menu" defaultValue="json" visibleBindingId="reports_battery_status" visibleBindingValue="true">
-        		<Label>Payload Type:</Label>
-        		<List>
-        			<Option value="json">JSON</Option>
-        			<Option value="raw">Raw</Option>
-        		</List>
-        	</Field>
-            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="battery_payload_type" visibleBindingValue="json">
-                <Label>Payload Key:</Label>
+            <Field id="SupportsEnergyMeter" type="checkbox" defaultValue="false">
+                <Label>Device reports energy usage:</Label>
             </Field>
-            <Field id="battery_payload_key_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="battery_payload_type" visibleBindingValue="json" alwaysUseInDialogHeightCalc="true">
-                <Label>Enter key for dict entry for battery field.  If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
+            <Field id="energy_payload_key" type="textfield" defaultValue=""  visibleBindingId="SupportsEnergyMeter" visibleBindingValue="true">
+                <Label>Energy Payload Key:</Label>
+            </Field>
+            <Field id="SupportsEnergyMeterCurPower" type="checkbox" defaultValue="false">
+                <Label>Device reports power load:</Label>
+            </Field>
+            <Field id="power_payload_key" type="textfield" defaultValue=""  visibleBindingId="SupportsEnergyMeterCurPower" visibleBindingValue="true">
+                <Label>Power Payload Key:</Label>
+            </Field>
+            <Field id="extras_payload_key_note" type="label" fontSize="small" fontColor="darkgray" alwaysUseInDialogHeightCalc="true">
+                <Label>Payload Keys - If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
             </Field>
        </ConfigUI>
     </Device>
@@ -592,15 +611,27 @@
             <Field id="state_dict_payload_note" type="label" fontSize="small" fontColor="darkgray">
                 <Label>Enter the key(s) for the dict containing the device states.  If top level, enter '.'.  If nested entry, enter each key with '.' between.</Label>
             </Field>
-            <Field id="devices_separator3" type="separator"/>
+            <Field id="devices_separator4" type="separator"/>
             <Field id="reports_battery_status" type="checkbox" defaultValue="false">
                 <Label>Device reports battery status:</Label>
+            </Field>        	
+            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="reports_battery_status" visibleBindingValue="true">
+                <Label>Battery Payload Key:</Label>
             </Field>
-            <Field id="battery_payload_key" type="textfield" defaultValue="">
-                <Label>Payload Key:</Label>
+            <Field id="SupportsEnergyMeter" type="checkbox" defaultValue="false">
+                <Label>Device reports energy usage:</Label>
             </Field>
-            <Field id="battery_payload_key_note" type="label" fontSize="small" fontColor="darkgray">
-                <Label>Enter key for dict entry for battery field.  If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
+            <Field id="energy_payload_key" type="textfield" defaultValue=""  visibleBindingId="SupportsEnergyMeter" visibleBindingValue="true">
+                <Label>Energy Payload Key:</Label>
+            </Field>
+            <Field id="SupportsEnergyMeterCurPower" type="checkbox" defaultValue="false">
+                <Label>Device reports power load:</Label>
+            </Field>
+            <Field id="power_payload_key" type="textfield" defaultValue=""  visibleBindingId="SupportsEnergyMeterCurPower" visibleBindingValue="true">
+                <Label>Power Payload Key:</Label>
+            </Field>
+            <Field id="extras_payload_key_note" type="label" fontSize="small" fontColor="darkgray" alwaysUseInDialogHeightCalc="true">
+                <Label>Payload Keys - If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
             </Field>
        </ConfigUI>
     </Device>

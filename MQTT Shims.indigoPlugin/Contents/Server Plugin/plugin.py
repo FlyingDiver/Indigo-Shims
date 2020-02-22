@@ -176,16 +176,6 @@ class Plugin(indigo.PluginBase):
             self.logger.error(u"{}: update error determining message value: {}".format(device.name, e))
             return
         
-        if bool(device.pluginProps.get('reports_battery_status', False)):
-            if device.pluginProps['battery_payload_type'] == "raw":
-                battery_key = 'battery'
-                state_data[battery_key] = message_data["payload"]
-                
-            elif device.pluginProps['state_location_payload_type'] == "json":
-                battery_key = device.pluginProps['battery_payload_key']
-        else:
-            battery_key = None
-
         if device.deviceTypeId == "shimRelay":
             value = self.recurseDict(state_key, state_data)
             self.logger.debug(u"{}: shimRelay, state_key = {}, state_data = {}, value = {}".format(device.name, state_key, state_data, value))
@@ -224,9 +214,17 @@ class Plugin(indigo.PluginBase):
                 else:
                     device.updateStateImageOnServer(indigo.kStateImageSel.PowerOff)
 
-            if battery_key:
-                battery = self.recurseDict(battery_key, state_data)
+            if bool(device.pluginProps.get('reports_battery_status', False)):
+                battery = self.recurseDict(device.pluginProps['battery_payload_key'], state_data)
                 device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
+
+            if bool(device.pluginProps.get('SupportsEnergyMeter', False)) and ("accumEnergyTotal" in device.states):
+                energy = self.recurseDict(device.pluginProps['energy_payload_key'], state_data)
+                device.updateStateOnServer('accumEnergyTotal', energy, uiValue='{} kWh'.format(energy))
+
+            if bool(device.pluginProps.get('SupportsEnergyMeterCurPower', False)) and  ("curEnergyLevel" in device.states):
+                power = self.recurseDict(device.pluginProps['power_payload_key'], state_data)
+                device.updateStateOnServer('curEnergyLevel', power, uiValue='{} W'.format(power))
 
             states_key = device.pluginProps.get('state_dict_payload_key', None)
             if not states_key:
@@ -355,10 +353,18 @@ class Plugin(indigo.PluginBase):
                 else:
                     device.updateStateImageOnServer(indigo.kStateImageSel.PowerOff)
 
-            if battery_key:
-                battery = self.recurseDict(battery_key, state_data)
+            if bool(device.pluginProps.get('reports_battery_status', False)):
+                battery = self.recurseDict(device.pluginProps['battery_payload_key'], state_data)
                 device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
-                    
+
+            if bool(device.pluginProps.get('SupportsEnergyMeter', False)) and ("accumEnergyTotal" in device.states):
+                energy = self.recurseDict(device.pluginProps['energy_payload_key'], state_data)
+                device.updateStateOnServer('accumEnergyTotal', energy, uiValue='{} kWh'.format(energy))
+
+            if bool(device.pluginProps.get('SupportsEnergyMeterCurPower', False)) and  ("curEnergyLevel" in device.states):
+                power = self.recurseDict(device.pluginProps['power_payload_key'], state_data)
+                device.updateStateOnServer('curEnergyLevel', power, uiValue='{} W'.format(power))
+
             states_key = device.pluginProps.get('state_dict_payload_key', None)
             if not states_key:
                 return
@@ -471,11 +477,18 @@ class Plugin(indigo.PluginBase):
             else:
                 self.logger.debug(u"{}: update, unknown shimSensorSubtype: {}".format(device.name, device.pluginProps["shimSensorSubtype"]))
 
-            if battery_key:
-                battery = self.recurseDict(battery_key, state_data)
+            if bool(device.pluginProps.get('reports_battery_status', False)):
+                battery = self.recurseDict(device.pluginProps['battery_payload_key'], state_data)
                 device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
 
-                
+            if bool(device.pluginProps.get('SupportsEnergyMeter', False)) and ("accumEnergyTotal" in device.states):
+                energy = self.recurseDict(device.pluginProps['energy_payload_key'], state_data)
+                device.updateStateOnServer('accumEnergyTotal', energy, uiValue='{} kWh'.format(energy))
+
+            if bool(device.pluginProps.get('SupportsEnergyMeterCurPower', False)) and  ("curEnergyLevel" in device.states):
+                power = self.recurseDict(device.pluginProps['power_payload_key'], state_data)
+                device.updateStateOnServer('curEnergyLevel', power, uiValue='{} W'.format(power))
+
             states_key = device.pluginProps.get('state_dict_payload_key', None)
             if not states_key:
                 return
@@ -512,10 +525,18 @@ class Plugin(indigo.PluginBase):
 
         elif device.deviceTypeId == "shimGeneric":
 
-            if battery_key:
-                battery = self.recurseDict(battery_key, state_data)
+            if bool(device.pluginProps.get('reports_battery_status', False)):
+                battery = self.recurseDict(device.pluginProps['battery_payload_key'], state_data)
                 device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
-                
+
+            if bool(device.pluginProps.get('SupportsEnergyMeter', False)) and ("accumEnergyTotal" in device.states):
+                energy = self.recurseDict(device.pluginProps['energy_payload_key'], state_data)
+                device.updateStateOnServer('accumEnergyTotal', energy, uiValue='{} kWh'.format(energy))
+
+            if bool(device.pluginProps.get('SupportsEnergyMeterCurPower', False)) and  ("curEnergyLevel" in device.states):
+                power = self.recurseDict(device.pluginProps['power_payload_key'], state_data)
+                device.updateStateOnServer('curEnergyLevel', power, uiValue='{} W'.format(power))
+
             states_key = device.pluginProps.get('state_dict_payload_key', None)
             if not states_key:
                 return
@@ -633,6 +654,7 @@ class Plugin(indigo.PluginBase):
             topic = pystache.render(action_template, {'uniqueID': device.address})
             self.logger.debug(u"{}: actionControlDevice: sending topic = '{}', payload = '{}'".format(device.name, topic, payload))
             self.publish_topic(device, topic, payload)
+            self.logger.info(u"Sent '{}' On".format(device.name))
 
         elif action.deviceAction == indigo.kDeviceAction.TurnOff:
             action_template =  device.pluginProps.get("action_template", None)
@@ -644,6 +666,7 @@ class Plugin(indigo.PluginBase):
             topic = pystache.render(action_template, {'uniqueID': device.address})
             self.logger.debug(u"{}: actionControlDevice: sending topic = '{}', payload = '{}'".format(device.name, topic, payload))
             self.publish_topic(device, topic, payload)
+            self.logger.info(u"Sent '{}' Off".format(device.name))
 
         elif action.deviceAction == indigo.kDeviceAction.SetBrightness:
             newBrightness = action.actionValue
@@ -661,6 +684,7 @@ class Plugin(indigo.PluginBase):
             payload = pystache.render(payload_template, {'brightness': newBrightness})
             self.logger.debug(u"{}: actionControlDevice: sending topic = '{}', payload = '{}'".format(device.name, topic, payload))
             self.publish_topic(device, topic, payload)
+            self.logger.info(u"Sent '{}' Brightness = {}".format(device.name, newBrightness))
 
         else:
             self.logger.error(u"{}: actionControlDevice: Unsupported action requested: {}".format(device.name, action.deviceAction))
@@ -681,6 +705,14 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u"{}: actionControlUniversal: RequestStatus".format(device.name))
             self.publish_topic(device, topic, "")
 
+# 		elif action.deviceAction == indigo.kUniversalAction.EnergyUpdate:
+#             self.logger.debug(u"{}: actionControlUniversal: EnergyUpdate".format(device.name))
+#             self.publish_topic(device, topic, "")
+# 
+# 		elif action.deviceAction == indigo.kUniversalAction.EnergyReset:
+#             self.logger.debug(u"{}: actionControlUniversal: EnergyReset".format(device.name))
+# 			dev.updateStateOnServer("accumEnergyTotal", 0.0)
+# 
         else:
             self.logger.error(u"{}: actionControlUniversal: Unsupported action requested: {}".format(device.name, action.deviceAction))
 
