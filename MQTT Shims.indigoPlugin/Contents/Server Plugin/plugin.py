@@ -32,6 +32,7 @@ class Plugin(indigo.PluginBase):
 
     def startup(self):
         indigo.server.log(u"Starting MQTT Shims")
+        self.triggers = {}
         self.shimDevices = []
         self.messageTypesWanted = []
         self.messageQueue = Queue()
@@ -87,6 +88,18 @@ class Plugin(indigo.PluginBase):
         if oldDevice.pluginProps.get('message_type', None) != newDevice.pluginProps.get('message_type', None):
             return True
         return False
+
+    def triggerStartProcessing(self, trigger):
+        self.logger.debug("{}: Adding Trigger".format(trigger.name))
+        assert trigger.pluginTypeId in ["deviceUpdated"]
+        assert trigger.id not in self.triggers
+        self.triggers[trigger.id] = trigger
+
+    def triggerStopProcessing(self, trigger):
+        self.logger.debug("{}: Removing Trigger".format(trigger.name))
+        assert trigger.id in self.triggers
+        del self.triggers[trigger.id]
+
 
     def runConcurrentThread(self):
         try:
@@ -570,9 +583,16 @@ class Plugin(indigo.PluginBase):
                 device.stateListOrDisplayStateIdChanged()    
             device.updateStatesOnServer(states_list)
 
-
         else:
             self.logger.warning(u"{}: Invalid device type: {}".format(device.name, device.deviceTypeId))
+
+        # Now do any triggers
+
+        for trigger in self.triggers.values():
+            if trigger.pluginProps["shimDevice"] == str(device.id):
+                if trigger.pluginTypeId == "deviceUpdated":
+                    indigo.trigger.execute(trigger)                    
+ 
             
     def recurseDict(self, key_string, data_dict):
         self.logger.threaddebug(u"recurseDict key_string = {}, data_dict= {}".format(key_string, data_dict))
