@@ -293,8 +293,8 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(u"{}: No brightnessLevel, setting onOffState to {}".format(device.name, state))
                 device.updateStateOnServer(key='onOffState', value=state)
 
-            if battery_key:
-                battery = self.recurseDict(battery_key, state_data)
+            if bool(device.pluginProps.get('reports_battery_status', False)):
+                battery = self.recurseDict(device.pluginProps['battery_payload_key'], state_data)
                 device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
 
             states_key = device.pluginProps.get('state_dict_payload_key', None)
