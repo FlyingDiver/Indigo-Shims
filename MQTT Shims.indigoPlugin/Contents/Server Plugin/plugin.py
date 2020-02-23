@@ -91,7 +91,7 @@ class Plugin(indigo.PluginBase):
 
     def triggerStartProcessing(self, trigger):
         self.logger.debug("{}: Adding Trigger".format(trigger.name))
-        assert trigger.pluginTypeId in ["deviceUpdated"]
+        assert trigger.pluginTypeId in ["deviceUpdated", "stateUpdated"]
         assert trigger.id not in self.triggers
         self.triggers[trigger.id] = trigger
 
@@ -592,6 +592,11 @@ class Plugin(indigo.PluginBase):
             if trigger.pluginProps["shimDevice"] == str(device.id):
                 if trigger.pluginTypeId == "deviceUpdated":
                     indigo.trigger.execute(trigger)                    
+                elif trigger.pluginTypeId == "stateUpdated":
+                    state_name = trigger.pluginProps["deviceState"]
+                    if state_name in states_dict:
+                        indigo.trigger.execute(trigger)                    
+ 
  
             
     def recurseDict(self, key_string, data_dict):
