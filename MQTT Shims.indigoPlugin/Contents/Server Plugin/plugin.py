@@ -65,12 +65,6 @@ class Plugin(indigo.PluginBase):
             self.logger.error(u"{}: Unknown device version: {}".format(device.name. instanceVers))
 
 
-        if bool(device.pluginProps.get('reports_battery_status', False)):
-            newProps = device.pluginProps
-            newProps["configDone"] = True
-            newProps["SupportsBatteryLevel"] = True
-            device.replacePluginPropsOnServer(newProps)
-
         assert device.id not in self.shimDevices
         self.shimDevices.append(device.id)
         self.messageTypesWanted.append(device.pluginProps['message_type'])
@@ -83,7 +77,7 @@ class Plugin(indigo.PluginBase):
         self.messageTypesWanted.remove(device.pluginProps['message_type'])
 
     def didDeviceCommPropertyChange(self, oldDevice, newDevice):
-        if oldDevice.pluginProps.get('reports_battery_status', None) != newDevice.pluginProps.get('reports_battery_status', None):
+        if oldDevice.pluginProps.get('SupportsBatteryLevel', None) != newDevice.pluginProps.get('SupportsBatteryLevel', None):
             return True
         if oldDevice.pluginProps.get('message_type', None) != newDevice.pluginProps.get('message_type', None):
             return True
@@ -209,7 +203,7 @@ class Plugin(indigo.PluginBase):
             if device.pluginProps["shimSensorSubtype"] == "Generic":
                 device.updateStateOnServer(key='onOffState', value=value)
                 if value:
-                    device.updateStateImageOnServer(indigo.kStateImageSel.Sensorn)
+                    device.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
                 else:
                     device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
 
@@ -227,7 +221,7 @@ class Plugin(indigo.PluginBase):
                 else:
                     device.updateStateImageOnServer(indigo.kStateImageSel.PowerOff)
 
-            if bool(device.pluginProps.get('reports_battery_status', False)):
+            if bool(device.pluginProps.get('SupportsBatteryLevel', False)):
                 battery = self.recurseDict(device.pluginProps['battery_payload_key'], state_data)
                 device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
 
@@ -293,9 +287,18 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(u"{}: No brightnessLevel, setting onOffState to {}".format(device.name, state))
                 device.updateStateOnServer(key='onOffState', value=state)
 
-            if bool(device.pluginProps.get('reports_battery_status', False)):
+            if bool(device.pluginProps.get('SupportsBatteryLevel', False)):
                 battery = self.recurseDict(device.pluginProps['battery_payload_key'], state_data)
                 device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
+
+            if bool(device.pluginProps.get('SupportsEnergyMeter', False)) and ("accumEnergyTotal" in device.states):
+                energy = self.recurseDict(device.pluginProps['energy_payload_key'], state_data)
+                device.updateStateOnServer('accumEnergyTotal', energy, uiValue='{} kWh'.format(energy))
+
+            if bool(device.pluginProps.get('SupportsEnergyMeterCurPower', False)) and  ("curEnergyLevel" in device.states):
+                power = self.recurseDict(device.pluginProps['power_payload_key'], state_data)
+                device.updateStateOnServer('curEnergyLevel', power, uiValue='{} W'.format(power))
+
 
             states_key = device.pluginProps.get('state_dict_payload_key', None)
             if not states_key:
@@ -366,7 +369,7 @@ class Plugin(indigo.PluginBase):
                 else:
                     device.updateStateImageOnServer(indigo.kStateImageSel.PowerOff)
 
-            if bool(device.pluginProps.get('reports_battery_status', False)):
+            if bool(device.pluginProps.get('SupportsBatteryLevel', False)):
                 battery = self.recurseDict(device.pluginProps['battery_payload_key'], state_data)
                 device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
 
@@ -490,7 +493,7 @@ class Plugin(indigo.PluginBase):
             else:
                 self.logger.debug(u"{}: update, unknown shimSensorSubtype: {}".format(device.name, device.pluginProps["shimSensorSubtype"]))
 
-            if bool(device.pluginProps.get('reports_battery_status', False)):
+            if bool(device.pluginProps.get('SupportsBatteryLevel', False)):
                 battery = self.recurseDict(device.pluginProps['battery_payload_key'], state_data)
                 device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
 
@@ -538,7 +541,7 @@ class Plugin(indigo.PluginBase):
 
         elif device.deviceTypeId == "shimGeneric":
 
-            if bool(device.pluginProps.get('reports_battery_status', False)):
+            if bool(device.pluginProps.get('SupportsBatteryLevel', False)):
                 battery = self.recurseDict(device.pluginProps['battery_payload_key'], state_data)
                 device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
 
@@ -677,7 +680,6 @@ class Plugin(indigo.PluginBase):
                 
             payload =  device.pluginProps.get("on_action_payload", "on")
             topic = pystache.render(action_template, {'uniqueID': device.address})
-            self.logger.debug(u"{}: actionControlDevice: sending topic = '{}', payload = '{}'".format(device.name, topic, payload))
             self.publish_topic(device, topic, payload)
             self.logger.info(u"Sent '{}' On".format(device.name))
 
@@ -689,7 +691,6 @@ class Plugin(indigo.PluginBase):
 
             payload =  device.pluginProps.get("off_action_payload", "off")
             topic = pystache.render(action_template, {'uniqueID': device.address})
-            self.logger.debug(u"{}: actionControlDevice: sending topic = '{}', payload = '{}'".format(device.name, topic, payload))
             self.publish_topic(device, topic, payload)
             self.logger.info(u"Sent '{}' Off".format(device.name))
 
@@ -707,7 +708,6 @@ class Plugin(indigo.PluginBase):
 
             topic = pystache.render(action_template, {'uniqueID': device.address})
             payload = pystache.render(payload_template, {'brightness': newBrightness})
-            self.logger.debug(u"{}: actionControlDevice: sending topic = '{}', payload = '{}'".format(device.name, topic, payload))
             self.publish_topic(device, topic, payload)
             self.logger.info(u"Sent '{}' Brightness = {}".format(device.name, newBrightness))
 
@@ -726,18 +726,24 @@ class Plugin(indigo.PluginBase):
             return
         topic = pystache.render(action_template, {'uniqueID': device.address})
 
-        if action.deviceAction == indigo.kUniversalAction.RequestStatus:
+        if action.deviceAction == indigo.kUniversalAction.RequestStatus or action.deviceAction == indigo.kUniversalAction.EnergyUpdate:
             self.logger.debug(u"{}: actionControlUniversal: RequestStatus".format(device.name))
-            self.publish_topic(device, topic, "")
+            if not bool(device.pluginProps.get('SupportsStatusRequest', False)):
+                self.logger.warning(u"{}: actionControlUniversal: device does not support status requests".format(device.name))                
+            else:
+                action_template =  device.pluginProps.get("status_action_template", None)
+                if not action_template:
+                    self.logger.error(u"{}: actionControlUniversal: no action template".format(device.name))
+                    return
+                payload =  device.pluginProps.get("status_action_payload", "")
+                topic = pystache.render(action_template, {'uniqueID': device.address})
+                self.publish_topic(device, topic, payload)
+                self.logger.info(u"Sent '{}' Status Request".format(device.name))
 
-# 		elif action.deviceAction == indigo.kUniversalAction.EnergyUpdate:
-#             self.logger.debug(u"{}: actionControlUniversal: EnergyUpdate".format(device.name))
-#             self.publish_topic(device, topic, "")
-# 
 # 		elif action.deviceAction == indigo.kUniversalAction.EnergyReset:
 #             self.logger.debug(u"{}: actionControlUniversal: EnergyReset".format(device.name))
 # 			dev.updateStateOnServer("accumEnergyTotal", 0.0)
-# 
+ 
         else:
             self.logger.error(u"{}: actionControlUniversal: Unsupported action requested: {}".format(device.name, action.deviceAction))
 

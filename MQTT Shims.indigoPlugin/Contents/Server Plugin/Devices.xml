@@ -6,7 +6,7 @@
             <SupportURL>http://forums.indigodomo.com/viewforum.php?f=214</SupportURL>
 			<Field id="SupportsOnState" type="checkbox" defaultValue="true" hidden="true" />
 			<Field id="SupportsSensorValue" type="checkbox" defaultValue="false" hidden="true" />
-			<Field id="SupportsStatusRequest" type="checkbox" defaultValue="true" hidden="true" />
+            <Field id="states_list" type="list" hidden="true"><List class="self" method="getStateList"/></Field>
 
             <Field id="brokerID" type="menu">
                 <Label>MQTT Broker:</Label>
@@ -98,7 +98,7 @@
             <Field id="devices_separator2" type="separator"/>
 
             <Field id="action_template" type="textfield" defaultValue="cmnd/{{uniqueID}}/Power">
-                <Label>Action Template:
+                <Label>Action Topic Template:
                 </Label>
             </Field>
             <Field id="on_action_payload" type="textfield" defaultValue="on">
@@ -108,6 +108,16 @@
             <Field id="off_action_payload" type="textfield" defaultValue="off">
                 <Label>Off Action Payload:
                 </Label>
+            </Field>
+
+            <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false">
+                <Label>Device supports status requests:</Label>
+            </Field>        	
+            <Field id="status_action_template" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
+                <Label>Status Request Topic Template:</Label>
+            </Field>
+            <Field id="status_action_payload" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
+                <Label>Status Request Payload Template:</Label>
             </Field>
             <Field id="action_template_note" type="label" fontSize="small" fontColor="darkgray" alwaysUseInDialogHeightCalc="true">
                 <Label>See the Wiki for how to use this section.</Label>
@@ -121,10 +131,10 @@
             </Field>
 
             <Field id="devices_separator4" type="separator"/>
-            <Field id="reports_battery_status" type="checkbox" defaultValue="false">
+            <Field id="SupportsBatteryLevel" type="checkbox" defaultValue="false">
                 <Label>Device reports battery status:</Label>
             </Field>        	
-            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="reports_battery_status" visibleBindingValue="true">
+            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="SupportsBatteryLevel" visibleBindingValue="true">
                 <Label>Battery Payload Key:</Label>
             </Field>
             <Field id="SupportsEnergyMeter" type="checkbox" defaultValue="false">
@@ -151,7 +161,7 @@
             <SupportURL>http://forums.indigodomo.com/viewforum.php?f=214</SupportURL>
 			<Field id="SupportsOnState" type="checkbox" defaultValue="false" hidden="true" />
 			<Field id="SupportsSensorValue" type="checkbox" defaultValue="true" hidden="true" />
-			<Field id="SupportsStatusRequest" type="checkbox" defaultValue="true" hidden="true" />
+            <Field id="states_list" type="list" hidden="true"><List class="self" method="getStateList"/></Field>
 
             <Field id="brokerID" type="menu">
                 <Label>MQTT Broker:</Label>
@@ -253,6 +263,15 @@
                 <Label>Dimmer Action Payload:
                 </Label>
             </Field>
+            <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false">
+                <Label>Device supports status requests:</Label>
+            </Field>        	
+            <Field id="status_action_template" type="textfield" defaultValue="cmnd/{{uniqueID}}/Status"  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
+                <Label>Status Request Topic Template:</Label>
+            </Field>
+            <Field id="status_action_payload" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
+                <Label>Status Request Payload Template:</Label>
+            </Field>
             <Field id="action_template_note" type="label" fontSize="small" fontColor="darkgray" alwaysUseInDialogHeightCalc="true">
                 <Label>See the Wiki for how to use this section.</Label>
             </Field>
@@ -264,10 +283,10 @@
                 <Label>Multi-States Key:</Label>
             </Field>           
             <Field id="devices_separator4" type="separator"/>
-            <Field id="reports_battery_status" type="checkbox" defaultValue="false">
+            <Field id="SupportsBatteryLevel" type="checkbox" defaultValue="false">
                 <Label>Device reports battery status:</Label>
             </Field>        	
-            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="reports_battery_status" visibleBindingValue="true">
+            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="SupportsBatteryLevel" visibleBindingValue="true">
                 <Label>Battery Payload Key:</Label>
             </Field>
             <Field id="SupportsEnergyMeter" type="checkbox" defaultValue="false">
@@ -295,7 +314,7 @@
             <SupportURL>http://forums.indigodomo.com/viewforum.php?f=214</SupportURL>
 			<Field id="SupportsOnState" type="checkbox" defaultValue="true" hidden="true" />
 			<Field id="SupportsSensorValue" type="checkbox" defaultValue="false" hidden="true" />
-			<Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" />
+            <Field id="states_list" type="list" hidden="true"><List class="self" method="getStateList"/></Field>
 			
             <Field id="brokerID" type="menu">
                 <Label>MQTT Broker:</Label>
@@ -391,10 +410,19 @@
                 <Label>Multi-States Key:</Label>
             </Field>
             <Field id="devices_separator4" type="separator"/>
-            <Field id="reports_battery_status" type="checkbox" defaultValue="false">
+            <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false">
+                <Label>Device supports status requests:</Label>
+            </Field>        	
+            <Field id="status_action_template" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
+                <Label>Status Request Topic Template:</Label>
+            </Field>
+            <Field id="status_action_payload" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
+                <Label>Status Request Payload Template:</Label>
+            </Field>
+            <Field id="SupportsBatteryLevel" type="checkbox" defaultValue="false">
                 <Label>Device reports battery status:</Label>
             </Field>        	
-            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="reports_battery_status" visibleBindingValue="true">
+            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="SupportsBatteryLevel" visibleBindingValue="true">
                 <Label>Battery Payload Key:</Label>
             </Field>
             <Field id="SupportsEnergyMeter" type="checkbox" defaultValue="false">
@@ -421,7 +449,6 @@
             <SupportURL>http://forums.indigodomo.com/viewforum.php?f=214</SupportURL>
 			<Field id="SupportsOnState" type="checkbox" defaultValue="false" hidden="true" />
 			<Field id="SupportsSensorValue" type="checkbox" defaultValue="true" hidden="true" />
-			<Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" />
             <Field id="states_list" type="list" hidden="true"><List class="self" method="getStateList"/></Field>
 			
             <Field id="brokerID" type="menu">
@@ -528,10 +555,19 @@
                 <Label>Multi-States Key:</Label>
             </Field>
             <Field id="devices_separator4" type="separator"/>
-            <Field id="reports_battery_status" type="checkbox" defaultValue="false">
-                <Label>Device reports battery status:</Label>
+            <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false">
+                <Label>Device supports status requests:</Label>
             </Field>        	
-            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="reports_battery_status" visibleBindingValue="true">
+            <Field id="status_action_template" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
+                <Label>Status Request Topic Template:</Label>
+            </Field>
+            <Field id="status_action_payload" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
+                <Label>Status Request Payload Template:</Label>
+            </Field>
+            <Field id="SupportsBatteryLevel" type="checkbox" defaultValue="false">
+                <Label>Device reports battery level:</Label>
+            </Field>        	
+            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="SupportsBatteryLevel" visibleBindingValue="true">
                 <Label>Battery Payload Key:</Label>
             </Field>
             <Field id="SupportsEnergyMeter" type="checkbox" defaultValue="false">
@@ -558,7 +594,6 @@
             <SupportURL>http://forums.indigodomo.com/viewforum.php?f=214</SupportURL>
 			<Field id="SupportsOnState" type="checkbox" defaultValue="false" hidden="true" />
 			<Field id="SupportsSensorValue" type="checkbox" defaultValue="false" hidden="true" />
-			<Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" />
             <Field id="states_list" type="list" hidden="true"><List class="self" method="getStateList"/></Field>
             <Field id="state_location" type="textfield" defaultValue="payload" hidden="true" />
             <Field id="state_location_payload_type" type="textfield" defaultValue="json" hidden="true" />
@@ -612,10 +647,19 @@
                 <Label>Enter the key(s) for the dict containing the device states.  If top level, enter '.'.  If nested entry, enter each key with '.' between.</Label>
             </Field>
             <Field id="devices_separator4" type="separator"/>
-            <Field id="reports_battery_status" type="checkbox" defaultValue="false">
+            <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false">
+                <Label>Device supports status requests:</Label>
+            </Field>        	
+            <Field id="status_action_template" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
+                <Label>Status Request Topic Template:</Label>
+            </Field>
+            <Field id="status_action_payload" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
+                <Label>Status Request Payload Template:</Label>
+            </Field>
+            <Field id="SupportsBatteryLevel" type="checkbox" defaultValue="false">
                 <Label>Device reports battery status:</Label>
             </Field>        	
-            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="reports_battery_status" visibleBindingValue="true">
+            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="SupportsBatteryLevel" visibleBindingValue="true">
                 <Label>Battery Payload Key:</Label>
             </Field>
             <Field id="SupportsEnergyMeter" type="checkbox" defaultValue="false">
