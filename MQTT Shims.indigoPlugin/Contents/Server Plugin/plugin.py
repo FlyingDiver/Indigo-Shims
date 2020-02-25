@@ -2,8 +2,10 @@
 # -*- coding: utf-8 -*-
 ####################
 
+import os
 import logging
 import json
+import yaml
 import pystache
 from Queue import Queue
 
@@ -740,9 +742,9 @@ class Plugin(indigo.PluginBase):
                 self.publish_topic(device, topic, payload)
                 self.logger.info(u"Sent '{}' Status Request".format(device.name))
 
-# 		elif action.deviceAction == indigo.kUniversalAction.EnergyReset:
+#       elif action.deviceAction == indigo.kUniversalAction.EnergyReset:
 #             self.logger.debug(u"{}: actionControlUniversal: EnergyReset".format(device.name))
-# 			dev.updateStateOnServer("accumEnergyTotal", 0.0)
+#           dev.updateStateOnServer("accumEnergyTotal", 0.0)
  
         else:
             self.logger.error(u"{}: actionControlUniversal: Unsupported action requested: {}".format(device.name, action.deviceAction))
@@ -776,3 +778,82 @@ class Plugin(indigo.PluginBase):
             except:
                 self.logLevel = logging.INFO
             self.indigo_log_handler.setLevel(self.logLevel)
+
+    ########################################
+    # Custom Plugin Action callbacks (defined in Actions.xml)
+    ######################
+        
+    def pickDevice(self, filter=None, valuesDict=None, typeId=0, targetId=0):
+        retList = []
+        for devID in self.shimDevices:
+            device = indigo.devices[int(devID)]
+            retList.append((device.id, device.name))
+        retList.sort(key=lambda tup: tup[1])
+        return retList
+
+    def dumpYAML(self, valuesDict, typeId):
+        device = indigo.devices[int(valuesDict["deviceID"])]
+        template = {'type': device.deviceTypeId}
+        props = {}
+        for key in device.pluginProps:
+            self.logger.debug(u"{} ({}) -> {}".format(key, type(device.pluginProps[key]), device.pluginProps[key]))
+            if isinstance(device.pluginProps[key], indigo.List):
+                continue
+            if isinstance(device.pluginProps[key], indigo.Dict):
+                continue
+            if key in ['brokerID', 'address']:
+                continue
+            props[key] = device.pluginProps[key]
+        template['props'] = props
+
+        for trigger in indigo.triggers:
+            if trigger.pluginId == 'com.flyingdiver.indigoplugin.mqtt' and trigger.pluginTypeId == 'topicMatch':
+                if trigger.globalProps['com.flyingdiver.indigoplugin.mqtt']['message_type'] == props['message_type']:
+                    self.logger.debug("\n{}\n".format(trigger))
+                    match_list = []
+                    for item in trigger.globalProps['com.flyingdiver.indigoplugin.mqtt']['match_list']:
+                        match_list.append(item)
+                    break
+                    
+        template['trigger'] = {
+            'message_type': props['message_type'], 
+            'match_list': json.dumps(match_list),
+            'queueMessage': True
+        }
+                        
+        self.logger.info("\n{}".format(yaml.safe_dump(template, allow_unicode=True, width=80, indent=4, default_flow_style=False).decode('utf-8')))
+
+        return True
+
+    def pickDeviceTemplate(self, filter=None, valuesDict=None, typeId=0, targetId=0):
+        retList = []
+        template_dir = indigo.server.getInstallFolderPath() + '/' + "MQTT Shim Templates"
+
+        # iterate through the template directory, make list of names and paths
+        # r=root, d=directories, f = files
+        for r, d, f in os.walk(template_dir):
+            for file in f:
+                (base, ext) = os.path.splitext(file)
+                if ext == '.yaml':
+                    retList.append((os.path.join(r, file), base))
+        retList.sort(key=lambda tup: tup[1])
+        self.logger.debug("{}".format(retList))
+        return retList
+
+    
+    def createDeviceFromTemplate(self, valuesDict, typeId):
+        self.logger.debug("createDeviceFromTemplate, typeId = {}, valuesDict = {}".format(typeId, valuesDict))
+        stream = file(valuesDict['deviceTemplatePath'], 'r')
+        template = yaml.safe_load(stream)
+        template['props']['brokerID'] = valuesDict['brokerID']        
+        try:
+            indigo.device.create(indigo.kProtocol.Plugin, 
+                address=valuesDict['address'], 
+                name="{} {}".format(template['type'], valuesDict['address']), 
+                deviceTypeId=template['type'], 
+                props=template['props'])
+        except Exception, e:
+            self.logger.error("Error calling indigo.device.create(): {}".format(e.message))
+
+        return True
+        

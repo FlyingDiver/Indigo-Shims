@@ -1,0 +1,29 @@
+<MenuItems>
+	<MenuItem id="createDeviceFromTemplate">
+		<Name>Create Device from Template</Name>
+		<CallbackMethod>createDeviceFromTemplate</CallbackMethod>
+        <ConfigUI>
+           <Field id="deviceTemplatePath" type="menu">
+                <Label>Device Type:</Label>
+                <List class="self" method="pickDeviceTemplate" dynamicReload="true"/>
+            </Field>
+            <Field id="brokerID" type="menu">
+                <Label>MQTT Broker:</Label>
+                <List class="self" filter="" method="getBrokerDevices" dynamicReload="true"/>
+            </Field>
+           <Field id="address" type="textfield">
+                <Label>Unique Name:</Label>
+            </Field>
+        </ConfigUI>
+	</MenuItem>
+	<MenuItem id="dumpYAML">
+		<Name>Write Device Template to Log</Name>
+		<CallbackMethod>dumpYAML</CallbackMethod>
+        <ConfigUI>
+           <Field id="deviceID" type="menu">
+                <Label>Device:</Label>
+                <List class="self" method="pickDevice" dynamicReload="true"/>
+            </Field>
+        </ConfigUI>
+	</MenuItem>
+</MenuItems>
