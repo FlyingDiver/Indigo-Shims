@@ -1,0 +1,24 @@
+type: shimOnOffSensor
+props:
+    SupportsBatteryLevel: true
+    SupportsOnState: true
+    SupportsSensorValue: false
+    SupportsStatusRequest: false
+    battery_payload_key: battery
+    battery_payload_type: json
+    configDone: true
+    message_type: '##WYZE##'
+    reports_battery_status: true
+    shimSensorSubtype: MotionSensor
+    state_location: payload
+    state_location_payload_key: state
+    state_location_payload_type: json
+    state_location_topic_field: '0'
+    state_on_value: active
+    uid_location: payload
+    uid_location_payload_key: address
+    uid_location_topic_field: '0'
+trigger:
+    match_list: '["Match: barn", "Match: wyze", "Match: update", "End: "]'
+    message_type: '##WYZE##'
+    queueMessage: true

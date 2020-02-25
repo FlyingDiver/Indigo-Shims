@@ -1,0 +1,30 @@
+type: shimValueSensor
+props:
+    SupportsBatteryLevel: true
+    SupportsEnergyMeter: false
+    SupportsEnergyMeterCurPower: false
+    SupportsOnState: false
+    SupportsSensorValue: true
+    SupportsStatusRequest: false
+    adjustmentFunction: ''
+    battery_payload_key: battery
+    battery_payload_type: json
+    energy_payload_key: ''
+    message_type: Shelly-Temperature
+    power_payload_key: ''
+    reports_battery_status: false
+    shimSensorPrecision: '2'
+    shimSensorSubtype: Temperature-F
+    state_dict_payload_key: ''
+    state_location: payload
+    state_location_payload_key: ''
+    state_location_payload_type: raw
+    state_location_topic_field: '0'
+    uid_location: topic
+    uid_location_payload_key: ''
+    uid_location_topic_field: '1'
+trigger:
+    match_list: '["Match: shellies", "Any: ", "Match: sensor", "Match: temperature",
+        "End: "]'
+    message_type: Shelly-Temperature
+    queueMessage: true

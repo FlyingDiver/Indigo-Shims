@@ -107,7 +107,7 @@ class Plugin(indigo.PluginBase):
                     self.processMessages()                
                     self.sleep(0.1)
                     
-        except self.stopThread:
+        except self.StopThread:
             pass        
             
 
@@ -824,16 +824,31 @@ class Plugin(indigo.PluginBase):
         return True
 
     def pickDeviceTemplate(self, filter=None, valuesDict=None, typeId=0, targetId=0):
-        retList = []
-        template_dir = indigo.server.getInstallFolderPath() + '/' + "MQTT Shim Templates"
 
-        # iterate through the template directory, make list of names and paths
+        templates = {}
+        # iterate through the internal template directory, make list of names and paths
         # r=root, d=directories, f = files
+        template_dir = "./Templates"
         for r, d, f in os.walk(template_dir):
             for file in f:
                 (base, ext) = os.path.splitext(file)
                 if ext == '.yaml':
-                    retList.append((os.path.join(r, file), base))
+                    templates[base] = os.path.join(r, file)
+
+        template_dir = indigo.server.getInstallFolderPath() + '/' + "MQTT Shim Templates"
+
+        # iterate through the external template directory, make list of names and paths
+        # r=root, d=directories, f = files
+        template_dir = indigo.server.getInstallFolderPath() + '/' + "MQTT Shim Templates"
+        for r, d, f in os.walk(template_dir):
+            for file in f:
+                (base, ext) = os.path.splitext(file)
+                if ext == '.yaml':
+                    templates[base] = os.path.join(r, file)
+
+        retList = []
+        for key in templates:
+            retList.append((templates[key], key))
         retList.sort(key=lambda tup: tup[1])
         self.logger.debug("{}".format(retList))
         return retList
@@ -853,19 +868,22 @@ class Plugin(indigo.PluginBase):
         except Exception, e:
             self.logger.error("Error calling indigo.device.create(): {}".format(e.message))
 
-        try:
-            indigo.pluginEvent.create(
-                name="{} {} Trigger".format(template['type'], valuesDict['address']), 
-                pluginId="com.flyingdiver.indigoplugin.mqtt",
-                pluginTypeId="topicMatch",
-                props={
-                    "brokerID":     valuesDict['brokerID'],  
-                    "message_type": template['trigger']['message_type'], 
-                    "queueMessage": template['trigger']['queueMessage'], 
-                    "match_list":   json.loads(template['trigger']['match_list']) 
-                })
-        except Exception, e:
-            self.logger.error("Error calling indigo.pluginEvent.create(): {}".format(e.message))
+        # create a trigger for this device if needed
+        
+        if bool(valuesDict['createTrigger']):
+            try:
+                indigo.pluginEvent.create(
+                    name="{} {} Trigger".format(template['type'], valuesDict['address']), 
+                    pluginId="com.flyingdiver.indigoplugin.mqtt",
+                    pluginTypeId="topicMatch",
+                    props={
+                        "brokerID":     valuesDict['brokerID'],  
+                        "message_type": template['trigger']['message_type'], 
+                        "queueMessage": template['trigger']['queueMessage'], 
+                        "match_list":   json.loads(template['trigger']['match_list']) 
+                    })
+            except Exception, e:
+                self.logger.error("Error calling indigo.pluginEvent.create(): {}".format(e.message))
     
         return True
         
