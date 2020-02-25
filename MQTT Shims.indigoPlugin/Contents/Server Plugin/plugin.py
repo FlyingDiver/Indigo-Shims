@@ -796,7 +796,6 @@ class Plugin(indigo.PluginBase):
         template = {'type': device.deviceTypeId}
         props = {}
         for key in device.pluginProps:
-            self.logger.debug(u"{} ({}) -> {}".format(key, type(device.pluginProps[key]), device.pluginProps[key]))
             if isinstance(device.pluginProps[key], indigo.List):
                 continue
             if isinstance(device.pluginProps[key], indigo.Dict):
@@ -809,7 +808,6 @@ class Plugin(indigo.PluginBase):
         for trigger in indigo.triggers:
             if trigger.pluginId == 'com.flyingdiver.indigoplugin.mqtt' and trigger.pluginTypeId == 'topicMatch':
                 if trigger.globalProps['com.flyingdiver.indigoplugin.mqtt']['message_type'] == props['message_type']:
-                    self.logger.debug("\n{}\n".format(trigger))
                     match_list = []
                     for item in trigger.globalProps['com.flyingdiver.indigoplugin.mqtt']['match_list']:
                         match_list.append(item)
@@ -848,12 +846,26 @@ class Plugin(indigo.PluginBase):
         template['props']['brokerID'] = valuesDict['brokerID']        
         try:
             indigo.device.create(indigo.kProtocol.Plugin, 
-                address=valuesDict['address'], 
                 name="{} {}".format(template['type'], valuesDict['address']), 
+                address=valuesDict['address'], 
                 deviceTypeId=template['type'], 
                 props=template['props'])
         except Exception, e:
             self.logger.error("Error calling indigo.device.create(): {}".format(e.message))
 
+        try:
+            indigo.pluginEvent.create(
+                name="{} {} Trigger".format(template['type'], valuesDict['address']), 
+                pluginId="com.flyingdiver.indigoplugin.mqtt",
+                pluginTypeId="topicMatch",
+                props={
+                    "brokerID":     valuesDict['brokerID'],  
+                    "message_type": template['trigger']['message_type'], 
+                    "queueMessage": template['trigger']['queueMessage'], 
+                    "match_list":   json.loads(template['trigger']['match_list']) 
+                })
+        except Exception, e:
+            self.logger.error("Error calling indigo.pluginEvent.create(): {}".format(e.message))
+    
         return True
         
