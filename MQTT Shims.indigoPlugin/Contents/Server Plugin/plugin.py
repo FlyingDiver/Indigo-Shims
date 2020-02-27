@@ -806,12 +806,15 @@ class Plugin(indigo.PluginBase):
         template['props'] = props
 
         for trigger in indigo.triggers:
-            if trigger.pluginId == 'com.flyingdiver.indigoplugin.mqtt' and trigger.pluginTypeId == 'topicMatch':
-                if trigger.globalProps['com.flyingdiver.indigoplugin.mqtt']['message_type'] == props['message_type']:
-                    match_list = []
-                    for item in trigger.globalProps['com.flyingdiver.indigoplugin.mqtt']['match_list']:
-                        match_list.append(item)
-                    break
+            try:
+                if trigger.pluginId == 'com.flyingdiver.indigoplugin.mqtt' and trigger.pluginTypeId == 'topicMatch':
+                    if trigger.globalProps['com.flyingdiver.indigoplugin.mqtt']['message_type'] == props['message_type']:
+                        match_list = []
+                        for item in trigger.globalProps['com.flyingdiver.indigoplugin.mqtt']['match_list']:
+                            match_list.append(item)
+                        break
+            except:
+                pass
                     
         template['trigger'] = {
             'message_type': props['message_type'], 
@@ -825,27 +828,24 @@ class Plugin(indigo.PluginBase):
 
     def pickDeviceTemplate(self, filter=None, valuesDict=None, typeId=0, targetId=0):
 
+        locations = ["./Templates", indigo.server.getInstallFolderPath() + '/' + self.pluginPrefs.get("externalTemplates", "MQTT Shim Templates")]
         templates = {}
-        # iterate through the internal template directory, make list of names and paths
-        # r=root, d=directories, f = files
-        template_dir = "./Templates"
-        for r, d, f in os.walk(template_dir):
-            for file in f:
-                (base, ext) = os.path.splitext(file)
-                if ext == '.yaml':
-                    templates[base] = os.path.join(r, file)
+        
+        for template_dir in locations:
 
-        template_dir = indigo.server.getInstallFolderPath() + '/' + "MQTT Shim Templates"
-
-        # iterate through the external template directory, make list of names and paths
-        # r=root, d=directories, f = files
-        template_dir = indigo.server.getInstallFolderPath() + '/' + "MQTT Shim Templates"
-        for r, d, f in os.walk(template_dir):
-            for file in f:
-                (base, ext) = os.path.splitext(file)
-                if ext == '.yaml':
-                    templates[base] = os.path.join(r, file)
-
+            # iterate through the  template directory, make list of names and paths
+            # r=root, d=directories, f = files
+        
+            for root, d, f in os.walk(template_dir):
+                for file in f:
+                    self.logger.debug("Found File {} in {}".format(file, root))
+                    (base, ext) = os.path.splitext(file)
+                    if ext == '.yaml':
+                        templates[base] = os.path.join(root, file)
+                for dir in d:
+                    self.logger.debug("Found directory {} in {}".format(dir, root))
+                    # need to look in here too 
+                    
         retList = []
         for key in templates:
             retList.append((templates[key], key))

@@ -1,6 +1,9 @@
 <?xml version="1.0"?>
 <PluginConfig>
     <SupportURL>http://forums.indigodomo.com/viewforum.php?f=214</SupportURL>
+    <Field id="externalTemplates" type="textfield" defaultValue="MQTT Shim Templates">
+        <Label>Template directory, relative to Indigo install directory:</Label>
+    </Field>       
     <Field id="logLevel" type="menu" defaultValue="20">
         <Label>Event Logging Level:</Label>
         <List>
