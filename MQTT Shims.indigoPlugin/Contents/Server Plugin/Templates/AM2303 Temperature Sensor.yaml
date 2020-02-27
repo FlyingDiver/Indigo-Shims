@@ -1,4 +1,5 @@
 type: shimValueSensor
+message_type: '##AM2302##'
 props:
     SupportsOnState: false
     SupportsSensorValue: true
@@ -6,7 +7,6 @@ props:
     adjustmentFunction: ''
     battery_payload_key: ''
     battery_payload_type: json
-    message_type: '##AM2302##'
     reports_battery_status: false
     shimSensorPrecision: '2'
     shimSensorSubtype: Temperature-F
@@ -20,5 +20,4 @@ props:
     uid_location_topic_field: '1'
 trigger:
     match_list: '["Match: barn", "Match: AM2302", "Match: update", "End: "]'
-    message_type: '##AM2302##'
     queueMessage: true

@@ -1,4 +1,5 @@
 type: shimValueSensor
+message_type: Shelly-Temperature
 props:
     SupportsBatteryLevel: true
     SupportsEnergyMeter: false
@@ -10,7 +11,6 @@ props:
     battery_payload_key: battery
     battery_payload_type: json
     energy_payload_key: ''
-    message_type: Shelly-Temperature
     power_payload_key: ''
     reports_battery_status: false
     shimSensorPrecision: '2'
@@ -24,7 +24,5 @@ props:
     uid_location_payload_key: ''
     uid_location_topic_field: '1'
 trigger:
-    match_list: '["Match: shellies", "Any: ", "Match: sensor", "Match: temperature",
-        "End: "]'
-    message_type: Shelly-Temperature
+    match_list: '["Match: shellies", "Any: ", "Match: sensor", "Match: temperature", "End: "]'
     queueMessage: true
