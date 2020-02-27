@@ -802,27 +802,30 @@ class Plugin(indigo.PluginBase):
                 continue
             if key in ['brokerID', 'address']:
                 continue
+            if key == 'message_type':
+                template['message_type'] = key
+                continue
+                
             props[key] = device.pluginProps[key]
         template['props'] = props
 
         for trigger in indigo.triggers:
             try:
                 if trigger.pluginId == 'com.flyingdiver.indigoplugin.mqtt' and trigger.pluginTypeId == 'topicMatch':
-                    if trigger.globalProps['com.flyingdiver.indigoplugin.mqtt']['message_type'] == props['message_type']:
+                    if trigger.globalProps['com.flyingdiver.indigoplugin.mqtt']['message_type'] == template['message_type']:
                         match_list = []
                         for item in trigger.globalProps['com.flyingdiver.indigoplugin.mqtt']['match_list']:
                             match_list.append(item)
                         break
             except:
                 pass
-                    
-        template['trigger'] = {
-            'message_type': props['message_type'], 
-            'match_list': json.dumps(match_list),
-            'queueMessage': True
-        }
+            else:      
+                template['trigger'] = {
+                    'match_list': json.dumps(match_list),
+                    'queueMessage': True
+                }
                         
-        self.logger.info("\n{}".format(yaml.safe_dump(template, allow_unicode=True, width=80, indent=4, default_flow_style=False).decode('utf-8')))
+        self.logger.info("\n{}".format(yaml.safe_dump(template, allow_unicode=True, width=120, indent=4, default_flow_style=False).decode('utf-8')))
 
         return True
 
@@ -859,6 +862,7 @@ class Plugin(indigo.PluginBase):
         stream = file(valuesDict['deviceTemplatePath'], 'r')
         template = yaml.safe_load(stream)
         template['props']['brokerID'] = valuesDict['brokerID']        
+        template['props']['message_type'] = template['message_type']        
         try:
             indigo.device.create(indigo.kProtocol.Plugin, 
                 name="{} {}".format(template['type'], valuesDict['address']), 
@@ -878,7 +882,7 @@ class Plugin(indigo.PluginBase):
                     pluginTypeId="topicMatch",
                     props={
                         "brokerID":     valuesDict['brokerID'],  
-                        "message_type": template['trigger']['message_type'], 
+                        "message_type": template['message_type'], 
                         "queueMessage": template['trigger']['queueMessage'], 
                         "match_list":   json.loads(template['trigger']['match_list']) 
                     })
