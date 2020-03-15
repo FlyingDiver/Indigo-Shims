@@ -693,6 +693,16 @@ class Plugin(indigo.PluginBase):
             topic = pystache.render(action_template, {'uniqueID': device.address})
             self.publish_topic(device, topic, payload)
             self.logger.info(u"Sent '{}' Off".format(device.name))
+        elif action.deviceAction == indigo.kDeviceAction.Toggle:
+            action_template =  device.pluginProps.get("action_template", None)
+            if not action_template:
+                self.logger.error(u"{}: actionControlDevice: no action template".format(device.name))
+                return
+
+            payload =  device.pluginProps.get("toggle_action_payload", "off")
+            topic = pystache.render(action_template, {'uniqueID': device.address})
+            self.publish_topic(device, topic, payload)
+            self.logger.info(u"Sent '{}' Toggle".format(device.name))
 
         elif action.deviceAction == indigo.kDeviceAction.SetBrightness:
             newBrightness = action.actionValue

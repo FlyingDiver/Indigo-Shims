@@ -109,6 +109,10 @@
                 <Label>Off Action Payload:
                 </Label>
             </Field>
+            <Field id="toggle_action_payload" type="textfield" defaultValue="toggle">
+                <Label>Toggle Action Payload:
+                </Label>
+            </Field>
 
             <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false">
                 <Label>Device supports status requests:</Label>
@@ -253,6 +257,10 @@
             </Field>
             <Field id="off_action_payload" type="textfield" defaultValue="off">
                 <Label>Off Action Payload:
+                </Label>
+            </Field>
+            <Field id="toggle_action_payload" type="textfield" defaultValue="toggle">
+                <Label>Toggle Action Payload:
                 </Label>
             </Field>
             <Field id="dimmer_action_template" type="textfield" defaultValue="cmnd/{{uniqueID}}/set">
