@@ -64,7 +64,7 @@ class Plugin(indigo.PluginBase):
             device.stateListOrDisplayStateIdChanged()
             self.logger.threaddebug(u"{}: Updated to version {}".format(device.name, kCurDevVersCount))
         else:
-            self.logger.error(u"{}: Unknown device version: {}".format(device.name. instanceVers))
+            self.logger.error(u"{}: Unknown device version: {}".format(device.name, instanceVers))
 
 
         assert device.id not in self.shimDevices
