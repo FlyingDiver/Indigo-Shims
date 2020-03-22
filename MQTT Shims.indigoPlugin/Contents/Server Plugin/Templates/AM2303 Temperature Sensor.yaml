@@ -4,8 +4,6 @@ props:
     SupportsOnState: false
     SupportsSensorValue: true
     SupportsStatusRequest: false
-    adjustmentFunction: ''
-    battery_payload_key: ''
     battery_payload_type: json
     reports_battery_status: false
     shimSensorPrecision: '2'
@@ -16,7 +14,6 @@ props:
     state_location_payload_type: json
     state_location_topic_field: '0'
     uid_location: topic
-    uid_location_payload_key: ''
     uid_location_topic_field: '1'
 trigger:
     match_list: '["Match: barn", "Match: AM2302", "Match: update", "End: "]'

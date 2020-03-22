@@ -805,17 +805,18 @@ class Plugin(indigo.PluginBase):
         device = indigo.devices[int(valuesDict["deviceID"])]
         template = {'type': device.deviceTypeId}
         props = {}
-        for key in device.pluginProps:
-            if isinstance(device.pluginProps[key], indigo.List):
+        for key, value in device.pluginProps.iteritems():
+            if isinstance(value, indigo.List):
                 continue
-            if isinstance(device.pluginProps[key], indigo.Dict):
+            if isinstance(value, indigo.Dict):
                 continue
             if key in ['brokerID', 'address']:
                 continue
             if key == 'message_type':
-                template['message_type'] = key
+                template['message_type'] = value
                 continue
-                
+            if value in ['', None]:
+                continue
             props[key] = device.pluginProps[key]
         template['props'] = props
 
@@ -826,14 +827,13 @@ class Plugin(indigo.PluginBase):
                         match_list = []
                         for item in trigger.globalProps['com.flyingdiver.indigoplugin.mqtt']['match_list']:
                             match_list.append(item)
+                        template['trigger'] = {
+                            'match_list': json.dumps(match_list),
+                            'queueMessage': True
+                        }
                         break
             except:
                 pass
-            else:      
-                template['trigger'] = {
-                    'match_list': json.dumps(match_list),
-                    'queueMessage': True
-                }
                         
         self.logger.info("\n{}".format(yaml.safe_dump(template, allow_unicode=True, width=120, indent=4, default_flow_style=False).decode('utf-8')))
 
@@ -885,6 +885,18 @@ class Plugin(indigo.PluginBase):
         # create a trigger for this device if needed
         
         if bool(valuesDict['createTrigger']):
+
+            # look to see if there's an existing trigger for this message-type
+            for trigger in indigo.triggers:
+                try:
+                    if trigger.pluginId == 'com.flyingdiver.indigoplugin.mqtt' and trigger.pluginTypeId == 'topicMatch':
+                        if trigger.globalProps['com.flyingdiver.indigoplugin.mqtt']['message_type'] == template['message_type']:
+                            # found a match, bail out
+                            self.logger.debug("Skipping trigger creation, existing trigger for message type '{}' found: {}".format(template['message_type'], trigger.name))
+                            return True
+                except:
+                    pass
+
             try:
                 indigo.pluginEvent.create(
                     name="{} {} Trigger".format(template['type'], valuesDict['address']), 
