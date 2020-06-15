@@ -8,6 +8,7 @@ import json
 import yaml
 import pystache
 from Queue import Queue
+from rgbxy import Converter
 
 kCurDevVersCount = 0        # current version of plugin devices
 
@@ -66,6 +67,10 @@ class Plugin(indigo.PluginBase):
         else:
             self.logger.error(u"{}: Unknown device version: {}".format(device.name, instanceVers))
 
+        props = device.pluginProps
+        if device.deviceTypeId == 'shimColor':
+            props["SupportsColor"] = True
+            device.replacePluginPropsOnServer(props)
 
         assert device.id not in self.shimDevices
         self.shimDevices.append(device.id)
@@ -275,10 +280,18 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(u"{}: state_key {} not found in payload".format(device.name, state_key))
                 return 
             self.logger.debug(u"{}: state = {}".format(device.name, state))
+
             value_key = device.pluginProps['value_location_payload_key']
             value = self.recurseDict(value_key, state_data)
             self.logger.debug(u"{}: shimDimmer, state_key = {}, value_key = {}, data = {}, state = {}, value = {}".format(device.name, state_key, value_key, state_data, state, value))
             if value != None:
+
+                scale = device.pluginProps.get("brightness_scale", "100")
+                if scale == '100':
+                    pass                
+                elif scale == '255':
+                    value = int(round(value/2.55))
+
                 self.logger.debug(u"{}: Updating brightnessLevel to {}".format(device.name, value))
                 device.updateStateOnServer(key='brightnessLevel', value=value)
             else:
@@ -288,6 +301,129 @@ class Plugin(indigo.PluginBase):
                     state = True
                 self.logger.debug(u"{}: No brightnessLevel, setting onOffState to {}".format(device.name, state))
                 device.updateStateOnServer(key='onOffState', value=state)
+
+            if bool(device.pluginProps.get('SupportsBatteryLevel', False)):
+                battery = self.recurseDict(device.pluginProps['battery_payload_key'], state_data)
+                device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
+
+            if bool(device.pluginProps.get('SupportsEnergyMeter', False)) and ("accumEnergyTotal" in device.states):
+                energy = self.recurseDict(device.pluginProps['energy_payload_key'], state_data)
+                device.updateStateOnServer('accumEnergyTotal', energy, uiValue='{} kWh'.format(energy))
+
+            if bool(device.pluginProps.get('SupportsEnergyMeterCurPower', False)) and  ("curEnergyLevel" in device.states):
+                power = self.recurseDict(device.pluginProps['power_payload_key'], state_data)
+                device.updateStateOnServer('curEnergyLevel', power, uiValue='{} W'.format(power))
+
+
+            states_key = device.pluginProps.get('state_dict_payload_key', None)
+            if not states_key:
+                return
+            try:
+                data = json.loads(message_data["payload"])
+            except:
+                self.logger.debug(u"{}: JSON decode error for payload, aborting".format(device.name))
+                return
+            self.logger.threaddebug(u"{}: update state_dict_payload_key, key = {}".format(device.name, states_key))
+            states_dict = self.recurseDict(states_key, data)
+            if not states_dict:
+                return
+            elif type(states_dict) != dict:
+                self.logger.error(u"{}: Device config error, bad Multi-States Key value: {}".format(device.name, states_key))
+                return
+            elif not len(states_dict) > 0:
+                self.logger.warning(u"{}: Possible device config error, Multi-States Key {} returns empty dict.".format(device.name, states_key))
+                return
+             
+            old_states =  device.pluginProps.get("states_list", indigo.List())
+            new_states = indigo.List()                
+            states_list = []
+            for key in states_dict:
+                new_states.append(key)
+                states_list.append({'key': key, 'value': states_dict[key], 'decimalPlaces': 2})
+            if old_states != new_states:
+                self.logger.threaddebug(u"{}: update, new states_list: {}".format(device.name, new_states))
+                newProps = device.pluginProps
+                newProps["states_list"] = new_states
+                device.replacePluginPropsOnServer(newProps)
+                device.stateListOrDisplayStateIdChanged()    
+            device.updateStatesOnServer(states_list)
+
+            
+        elif device.deviceTypeId == "shimColor":
+            state = self.recurseDict(state_key, state_data)
+            if state == None:
+                self.logger.debug(u"{}: state_key {} not found in payload".format(device.name, state_key))
+                return 
+            self.logger.debug(u"{}: state = {}".format(device.name, state))
+
+            value_key = device.pluginProps['value_location_payload_key']
+            brightness = self.recurseDict(value_key, state_data)
+            self.logger.debug(u"{}: shimColor, state_key = {}, value_key = {}, data = {}, state = {}, value = {}".format(device.name, state_key, value_key, state_data, state, brightness))
+            if brightness == None:
+                if state.lower() in ['off', 'false', '0']:
+                    state = False
+                else:
+                    state = True
+                self.logger.debug(u"{}: No brightnessLevel, setting onOffState to {}".format(device.name, state))
+                device.updateStateOnServer(key='onOffState', value=state)
+            
+            else:
+                scale = device.pluginProps.get("brightness_scale", "100")
+                if scale == '100':
+                    pass                
+                elif scale == '255':
+                    brightness = int(round(brightness/2.55))
+                self.logger.debug(u"{}: Updating brightnessLevel to {}".format(device.name, brightness))
+                device.updateStateOnServer(key='brightnessLevel', value=brightness)
+
+            # look for color information
+            
+            color_value_key = device.pluginProps['color_value_payload_key']
+            color_values = self.recurseDict(color_value_key, state_data)            
+            if color_values:
+                scale = device.pluginProps.get("rgb_scale", "100")
+                state_list = []
+                self.logger.debug(u"{}: Updating color temperature to {}".format(device.name, color_values))
+                
+                # lots of different ways the color could be reported.  Check some common patterns.
+                if 'r' in color_values and 'g' in color_values and 'b' in color_values:
+
+                    if scale == "100":
+                        state_list.append({'key':'redLevel',   'value':color_values['r']})
+                        state_list.append({'key':'greenLevel', 'value':color_values['g']})
+                        state_list.append({'key':'blueLevel',  'value':color_values['b']})
+                    elif scale == '255':
+                        state_list.append({'key':'redLevel',   'value':int(round(color_values['r']/2.55))})
+                        state_list.append({'key':'greenLevel', 'value':int(round(color_values['g']/2.55))})
+                        state_list.append({'key':'blueLevel',  'value':int(round(color_values['b']/2.55))})
+                
+                elif 'x' in color_values and 'y' in color_values:
+
+                    converter = Converter()
+                    r, g, b = converter.xy_to_rgb(color_values['x'], color_values['y'])
+
+                    if scale == "100":
+                        state_list.append({'key':'redLevel',   'value': r})
+                        state_list.append({'key':'greenLevel', 'value': g})
+                        state_list.append({'key':'blueLevel',  'value': b})
+                    elif scale == '255':
+                        state_list.append({'key':'redLevel',   'value':int(round(r/2.55))})
+                        state_list.append({'key':'greenLevel', 'value':int(round(g/2.55))})
+                        state_list.append({'key':'blueLevel',  'value':int(round(b/2.55))})
+
+                self.logger.debug(u"{}: Updating states: {}".format(device.name, state_list))
+                device.updateStatesOnServer(state_list)
+            
+            color_temp_key = device.pluginProps['color_temp_payload_key']
+            color_temp = self.recurseDict(color_temp_key, state_data)            
+            if color_temp:
+                scale = device.pluginProps.get("color_temp_scale", "Kelvin")
+                if scale == "Kelvin":
+                    pass
+                elif scale == "Mirek":
+                    color_temp = int(round(1000000.0/color_temp))
+                self.logger.debug(u"{}: Updating color temperature to {}".format(device.name, color_temp))
+                device.updateStateOnServer(key='whiteTemperature', value=color_temp)            
 
             if bool(device.pluginProps.get('SupportsBatteryLevel', False)):
                 battery = self.recurseDict(device.pluginProps['battery_payload_key'], state_data)
@@ -364,6 +500,13 @@ class Plugin(indigo.PluginBase):
                 else:
                     device.updateStateImageOnServer(indigo.kStateImageSel.MotionSensor)
                 
+            elif device.pluginProps["shimSensorSubtype"] == "Light":
+                device.updateStateOnServer(key='onOffState', value=value)
+                if value:
+                    device.updateStateImageOnServer(indigo.kStateImageSel.DimmerOn)
+                else:
+                    device.updateStateImageOnServer(indigo.kStateImageSel.DimmerOff)
+
             elif device.pluginProps["shimSensorSubtype"] == "Power":
                 device.updateStateOnServer(key='onOffState', value=value)
                 if value:
@@ -683,7 +826,6 @@ class Plugin(indigo.PluginBase):
             payload =  device.pluginProps.get("on_action_payload", "on")
             topic = pystache.render(action_template, {'uniqueID': device.address})
             self.publish_topic(device, topic, payload)
-            self.logger.info(u"Sent '{}' On".format(device.name))
 
         elif action.deviceAction == indigo.kDeviceAction.TurnOff:
             action_template =  device.pluginProps.get("action_template", None)
@@ -694,7 +836,7 @@ class Plugin(indigo.PluginBase):
             payload =  device.pluginProps.get("off_action_payload", "off")
             topic = pystache.render(action_template, {'uniqueID': device.address})
             self.publish_topic(device, topic, payload)
-            self.logger.info(u"Sent '{}' Off".format(device.name))
+
         elif action.deviceAction == indigo.kDeviceAction.Toggle:
             action_template =  device.pluginProps.get("action_template", None)
             if not action_template:
@@ -704,10 +846,14 @@ class Plugin(indigo.PluginBase):
             payload =  device.pluginProps.get("toggle_action_payload", "off")
             topic = pystache.render(action_template, {'uniqueID': device.address})
             self.publish_topic(device, topic, payload)
-            self.logger.info(u"Sent '{}' Toggle".format(device.name))
 
         elif action.deviceAction == indigo.kDeviceAction.SetBrightness:
-            newBrightness = action.actionValue
+            brightness = action.actionValue
+            scale = device.pluginProps.get("brightness_scale", "100")
+            if scale == '100':
+                pass                
+            elif scale == '255':
+                brightness = int(round(255.0 * (brightness / 100.0)))
 
             action_template =  device.pluginProps.get("dimmer_action_template", None)
             if not action_template:
@@ -717,11 +863,74 @@ class Plugin(indigo.PluginBase):
             if not payload_template:
                 self.logger.error(u"{}: actionControlDevice: no payload template".format(device.name))
                 return
-
+                
+            payload_data = {'brightness': brightness}
             topic = pystache.render(action_template, {'uniqueID': device.address})
-            payload = pystache.render(payload_template, {'brightness': newBrightness})
+            payload = pystache.render(payload_template, payload_data)
             self.publish_topic(device, topic, payload)
-            self.logger.info(u"Sent '{}' Brightness = {}".format(device.name, newBrightness))
+
+        elif action.deviceAction == indigo.kDeviceAction.SetColorLevels:
+        
+            actionColorVals = action.actionValue
+            self.logger.debug(u"{}: actionColorVals: '{}'".format(device.name, actionColorVals))
+
+            brightness = device.brightness
+            scale = device.pluginProps.get("brightness_scale", "100")
+            if scale == '100':
+                pass                
+            elif scale == '255':
+                brightness = int(round(255.0 * (brightness / 100.0)))
+            payload_data = {'brightness': brightness}
+
+            if device.supportsWhiteTemperature and 'whiteTemperature' in actionColorVals:
+
+                colorTemp = float(actionColorVals['whiteTemperature']) 
+                self.logger.debug(u"{}: SetColorLevels, changing color temperature to: {}".format(device.name, colorTemp))
+                scale = device.pluginProps.get("color_temp_scale", "Kelvin")
+                if scale == "Kelvin":
+                    pass
+                elif scale == "Mirek":
+                    colorTemp = int(round(1000000.0/colorTemp))
+                    
+                payload_data["color_temp"] = colorTemp
+                
+                action_template =  device.pluginProps.get("set_temp_topic", None)
+                if not action_template:
+                    self.logger.error(u"{}: actionControlDevice: no topic template for setting color temperature".format(device.name))
+                    return
+                payload_template =  device.pluginProps.get("set_temp_template", None)
+                if not payload_template:
+                    self.logger.error(u"{}: actionControlDevice: no payload template for setting color temperature".format(device.name))
+                    return
+           
+            elif device.supportsRGB and 'redLevel' in actionColorVals:
+
+                for color in ['redLevel', 'greenLevel', 'blueLevel']:
+                    colorVal = float(actionColorVals[color]) 
+                    scale = device.pluginProps.get("rgb_scale", "100")
+                    if scale == "100":
+                        pass
+                    elif scale == '255':
+                        colorVal = int(round(255.0 * (colorVal / 100.0)))
+                        
+                    payload_data[color] = colorVal
+                            
+                action_template =  device.pluginProps.get("set_rgb_topic", None)
+                if not action_template:
+                    self.logger.error(u"{}: actionControlDevice: no topic template for setting RGB color".format(device.name))
+                    return
+                payload_template =  device.pluginProps.get("set_rgb_template", None)
+                if not payload_template:
+                    self.logger.error(u"{}: actionControlDevice: no payload template for setting RGB color".format(device.name))
+                    return
+            else:
+                self.logger.debug(u"{}: SetColorLevels, unsupported color change".format(device.name))
+                return
+ 
+            # Render and send
+            topic = pystache.render(action_template, {'uniqueID': device.address})
+            payload = pystache.render(payload_template, payload_data)
+            self.publish_topic(device, topic, payload)
 
         else:
             self.logger.error(u"{}: actionControlDevice: Unsupported action requested: {}".format(device.name, action.deviceAction))

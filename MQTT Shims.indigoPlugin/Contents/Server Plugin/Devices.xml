@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <Devices>
+	<SupportURL>http://forums.indigodomo.com/viewforum.php?f=316</SupportURL>
     <Device id="shimRelay" type="relay">
         <Name>MQTT Switch Device</Name>
         <ConfigUI>
-            <SupportURL>http://forums.indigodomo.com/viewforum.php?f=214</SupportURL>
 			<Field id="SupportsOnState" type="checkbox" defaultValue="true" hidden="true" />
 			<Field id="SupportsSensorValue" type="checkbox" defaultValue="false" hidden="true" />
             <Field id="states_list" type="list" hidden="true"><List class="self" method="getStateList"/></Field>
@@ -86,19 +86,20 @@
                 <Label>String to match for sensor to be "on".</Label>
             </Field>
 
-    		<Field id="shimSensorSubtype" type="menu" defaultValue="Generic">
+    		<Field id="shimSensorSubtype" type="menu" defaultValue="Power">
 				<Label>Sensor Type:</Label>
                 <List>
                     <Option value="Generic">Generic</Option>
                     <Option value="Power">Power On/Off</Option>
+                    <Option value="Light">Light On/Off</Option>
                     <Option value="MotionSensor">Motion Sensor</Option>
                 </List>
 			</Field>
 
             <Field id="devices_separator2" type="separator"/>
 
-            <Field id="action_template" type="textfield" defaultValue="cmnd/{{uniqueID}}/Power">
-                <Label>Action Topic Template:
+            <Field id="action_template" type="textfield" defaultValue="">
+                <Label>Action Topic:
                 </Label>
             </Field>
             <Field id="on_action_payload" type="textfield" defaultValue="on">
@@ -118,13 +119,10 @@
                 <Label>Device supports status requests:</Label>
             </Field>        	
             <Field id="status_action_template" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
-                <Label>Status Request Topic Template:</Label>
+                <Label>Status Request Topic:</Label>
             </Field>
             <Field id="status_action_payload" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
-                <Label>Status Request Payload Template:</Label>
-            </Field>
-            <Field id="action_template_note" type="label" fontSize="small" fontColor="darkgray" alwaysUseInDialogHeightCalc="true">
-                <Label>See the Wiki for how to use this section.</Label>
+                <Label>Status Request Payload:</Label>
             </Field>
             <Field id="devices_separator3" type="separator"/>
             <Field id="state_dict_payload_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="state_location_payload_type" visibleBindingValue="json">
@@ -239,16 +237,16 @@
             </Field>
 
             <Field id="value_location_payload_key" type="textfield" defaultValue=""  visibleBindingId="state_location_payload_type" visibleBindingValue="json">
-                <Label>Value Key:</Label>
+                <Label>Value (Brightness) Key:</Label>
             </Field>
             <Field id="value_location_payload_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="state_location_payload_type" visibleBindingValue="json" alwaysUseInDialogHeightCalc="true">
-                <Label>Enter key for dict entry for value field.  If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
+                <Label>Enter key for dict entry for brightness field.  If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
             </Field>
 
             <Field id="devices_separator2" type="separator"/>
 
-            <Field id="action_template" type="textfield" defaultValue="cmnd/{{uniqueID}}/Power">
-                <Label>On/Off Action Topic Template:
+            <Field id="action_template" type="textfield" defaultValue="">
+                <Label>On/Off Action Topic:
                 </Label>
             </Field>
             <Field id="on_action_payload" type="textfield" defaultValue="on">
@@ -259,31 +257,243 @@
                 <Label>Off Action Payload:
                 </Label>
             </Field>
-            <Field id="toggle_action_payload" type="textfield" defaultValue="toggle">
-                <Label>Toggle Action Payload:
-                </Label>
-            </Field>
-            <Field id="dimmer_action_template" type="textfield" defaultValue="cmnd/{{uniqueID}}/set">
-                <Label>Dimmer Action Topic Template:
+            <Field id="dimmer_action_template" type="textfield" defaultValue="">
+                <Label>Dimmer Action Topic:
                 </Label>
             </Field>
             <Field id="dimmer_action_payload" type="textfield" defaultValue="{'turn': 'on', 'brightness': {{brightness}} }">
                 <Label>Dimmer Action Payload:
                 </Label>
             </Field>
+            <Field id="brightness_scale" type="menu" defaultValue="100">
+        		<Label>Device Brightness Scale:</Label>
+        		<List>  
+        			<Option value="100">0-100</Option>
+        			<Option value="255">0-255</Option>
+        		</List>
+        	</Field>
             <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false">
                 <Label>Device supports status requests:</Label>
             </Field>        	
-            <Field id="status_action_template" type="textfield" defaultValue="cmnd/{{uniqueID}}/Status"  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
-                <Label>Status Request Topic Template:</Label>
+            <Field id="status_action_template" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
+                <Label>Status Request Topic:</Label>
             </Field>
             <Field id="status_action_payload" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
-                <Label>Status Request Payload Template:</Label>
+                <Label>Status Request Payload:</Label>
             </Field>
-            <Field id="action_template_note" type="label" fontSize="small" fontColor="darkgray" alwaysUseInDialogHeightCalc="true">
-                <Label>See the Wiki for how to use this section.</Label>
+            <Field id="devices_separator3" type="separator"/>
+            <Field id="state_dict_payload_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="state_location_payload_type" visibleBindingValue="json">
+                <Label>If the payload has a dict with multiple entries that should all be states of the device, enter the key(s) for that dict.  If top level, enter '.'.  If nested entry, enter each key with '.' between.</Label>
             </Field>
-             <Field id="devices_separator3" type="separator"/>
+            <Field id="state_dict_payload_key" type="textfield" defaultValue=""  visibleBindingId="state_location_payload_type" visibleBindingValue="json">
+                <Label>Multi-States Key:</Label>
+            </Field>           
+            <Field id="devices_separator4" type="separator"/>
+            <Field id="SupportsBatteryLevel" type="checkbox" defaultValue="false">
+                <Label>Device reports battery status:</Label>
+            </Field>        	
+            <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="SupportsBatteryLevel" visibleBindingValue="true">
+                <Label>Battery Payload Key:</Label>
+            </Field>
+            <Field id="SupportsEnergyMeter" type="checkbox" defaultValue="false">
+                <Label>Device reports energy usage:</Label>
+            </Field>
+            <Field id="energy_payload_key" type="textfield" defaultValue=""  visibleBindingId="SupportsEnergyMeter" visibleBindingValue="true">
+                <Label>Energy Payload Key:</Label>
+            </Field>
+            <Field id="SupportsEnergyMeterCurPower" type="checkbox" defaultValue="false">
+                <Label>Device reports power load:</Label>
+            </Field>
+            <Field id="power_payload_key" type="textfield" defaultValue=""  visibleBindingId="SupportsEnergyMeterCurPower" visibleBindingValue="true">
+                <Label>Power Payload Key:</Label>
+            </Field>
+            <Field id="extras_payload_key_note" type="label" fontSize="small" fontColor="darkgray" alwaysUseInDialogHeightCalc="true">
+                <Label>Payload Keys - If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
+            </Field>
+
+       </ConfigUI>
+    </Device>
+
+    <Device id="shimColor" type="dimmer">
+        <Name>MQTT Color Device</Name>
+        <ConfigUI>
+            <SupportURL>http://forums.indigodomo.com/viewforum.php?f=214</SupportURL>
+			<Field id="SupportsOnState" type="checkbox" defaultValue="false" hidden="true" />
+			<Field id="SupportsSensorValue" type="checkbox" defaultValue="false" hidden="true" />
+			<Field type="checkbox" id="SupportsColor" defaultValue="true" hidden="true" />  <!-- Also set in deviceStartComm() -->
+			<Field type="checkbox" id="SupportsWhite" defaultValue="true" hidden="true" />
+			
+            <Field id="states_list" type="list" hidden="true"><List class="self" method="getStateList"/></Field>
+
+            <Field id="connection_section" type="label">
+                <Label>Broker Connection Information</Label>
+            </Field>
+            <Field id="brokerID" type="menu">
+                <Label>MQTT Broker:</Label>
+                <List class="self" filter="" method="getBrokerDevices" dynamicReload="true"/>
+            </Field>
+
+            <Field id="message_type" type="textfield">
+                <Label>Message Type:</Label>
+            </Field>
+            <Field id="message_type_note" type="label" fontSize="small" fontColor="darkgray" >
+                <Label>Must match the Message Type field in the MQTT Plugin's Action.</Label>
+            </Field>
+
+            <Field id="uid_location" type="menu" defaultValue="topic">
+        		<Label>Unique ID Location:</Label>
+        		<List>  
+        			<Option value="topic">Topic Component</Option>
+        			<Option value="payload">Payload Field</Option>
+        		</List>
+        	</Field>
+
+            <Field id="uid_location_topic_field" type="textfield" defaultValue="0"  visibleBindingId="uid_location" visibleBindingValue="topic">
+                <Label>Topic Field:</Label>
+            </Field>
+            <Field id="uid_location_topic_field_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="uid_location" visibleBindingValue="topic">
+                <Label>Enter array index for unique ID component in topic.  0 is first component.</Label>
+            </Field>
+            
+            <Field id="uid_location_payload_key" type="textfield" defaultValue=""  visibleBindingId="uid_location" visibleBindingValue="payload">
+                <Label>Payload Key:</Label>
+            </Field>
+            <Field id="uid_location_payload_key_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="uid_location" visibleBindingValue="payload" alwaysUseInDialogHeightCalc="true">
+                <Label>Enter key for dict entry for unique ID field.  If nested entry, enter each key with '.' between.  For example, "states.did" if the "did" key is inside the "states" dict.</Label>
+            </Field>
+                        
+            <Field id="address" type="textfield"  defaultValue="">
+                <Label>Unique ID Value:</Label>
+            </Field>
+            <Field id="address_note" type="label" fontSize="small" fontColor="darkgray" >
+                <Label>Unique ID value for the MQTT device.</Label>
+            </Field>
+
+            <Field id="devices_separator0" type="separator"/>
+            
+            <Field id="state_location" type="menu" defaultValue="payload">
+        		<Label>State Value Location:</Label>
+        		<List>
+        			<Option value="topic">Topic Component</Option>
+        			<Option value="payload">Payload Fields</Option>
+        		</List>
+        	</Field>
+            <Field id="state_location_topic_field" type="textfield" defaultValue="0"  visibleBindingId="state_location" visibleBindingValue="topic">
+                <Label>Topic Field:</Label>
+            </Field>
+            <Field id="state_location_topic_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="state_location" visibleBindingValue="topic">
+                <Label>Enter array index for state component in topic.  0 is first component.</Label>
+            </Field>
+            <Field id="state_location_payload_type" type="menu" defaultValue="json" visibleBindingId="state_location" visibleBindingValue="payload">
+        		<Label>Payload Type:</Label>
+        		<List>
+        			<Option value="json">JSON</Option>
+        			<Option value="raw">Raw</Option>
+        		</List>
+        	</Field>
+        	
+            <Field id="state_location_payload_key" type="textfield" defaultValue=""  visibleBindingId="state_location_payload_type" visibleBindingValue="json">
+                <Label>Payload Key:</Label>
+            </Field>
+            <Field id="state_location_payload_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="state_location_payload_type" visibleBindingValue="json" alwaysUseInDialogHeightCalc="true">
+                <Label>Enter key for dict entry for state field.  If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
+            </Field>
+
+            <Field id="value_location_payload_key" type="textfield" defaultValue=""  visibleBindingId="state_location_payload_type" visibleBindingValue="json">
+                <Label>Value (Brightness) Key:</Label>
+            </Field>
+            <Field id="value_location_payload_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="state_location_payload_type" visibleBindingValue="json" alwaysUseInDialogHeightCalc="true">
+                <Label>Enter key for dict entry for brightness field.  If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
+            </Field>
+
+            <Field id="color_value_payload_key" type="textfield" defaultValue=""  visibleBindingId="state_location_payload_type" visibleBindingValue="json">
+                <Label>Color Value Key:</Label>
+            </Field>
+            <Field id="color_value_payload_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="state_location_payload_type" visibleBindingValue="json" alwaysUseInDialogHeightCalc="true">
+                <Label>Enter key for dict entry for color value field.  If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
+            </Field>
+
+            <Field id="color_temp_payload_key" type="textfield" defaultValue=""  visibleBindingId="state_location_payload_type" visibleBindingValue="json">
+                <Label>Color Temperature Key:</Label>
+            </Field>
+            <Field id="color_temp_payload_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="state_location_payload_type" visibleBindingValue="json" alwaysUseInDialogHeightCalc="true">
+                <Label>Enter key for dict entry for color temperature field.  If nested entry, enter each key with '.' between.  For example, "states.value" if the "value" key is inside the "states" dict.</Label>
+            </Field>
+
+            <Field id="devices_separator2" type="separator"/>
+
+            <Field id="action_template" type="textfield" defaultValue="">
+                <Label>On/Off Action Topic:
+                </Label>
+            </Field>
+            <Field id="on_action_payload" type="textfield" defaultValue="on">
+                <Label>On Action Payload:
+                </Label>
+            </Field>
+            <Field id="off_action_payload" type="textfield" defaultValue="off">
+                <Label>Off Action Payload:
+                </Label>
+            </Field>
+            <Field id="dimmer_action_template" type="textfield" defaultValue="">
+                <Label>Dimmer Action Topic:
+                </Label>
+            </Field>
+            <Field id="dimmer_action_payload" type="textfield" defaultValue="{'turn': 'on', 'brightness': {{brightness}} }">
+                <Label>Dimmer Action Payload:
+                </Label>
+            </Field>
+            <Field id="brightness_scale" type="menu" defaultValue="100">
+        		<Label>Device Brightness Scale:</Label>
+        		<List>  
+        			<Option value="100">0-100</Option>
+        			<Option value="255">0-255</Option>
+        		</List>
+        	</Field>
+			<Field type="checkbox" id="SupportsRGB" defaultValue="true">
+				<Label>Supports RGB:</Label>
+			</Field>		
+            <Field id="set_rgb_topic" type="textfield" defaultValue=""  visibleBindingId="SupportsRGB" visibleBindingValue="true">
+                <Label>Set RGB Topic:</Label>
+            </Field>
+            <Field id="set_rgb_template" type="textfield" defaultValue=""  visibleBindingId="SupportsRGB" visibleBindingValue="true">
+                <Label>Set RGB Payload:</Label>
+            </Field>
+            <Field id="rgb_scale" type="menu" defaultValue="100" visibleBindingId="SupportsRGB" visibleBindingValue="true">
+        		<Label>Device RGB Scale:</Label>
+        		<List>  
+        			<Option value="100">0-100</Option>
+        			<Option value="255">0-255</Option>
+        		</List>
+        	</Field>
+
+			<Field type="checkbox" id="SupportsWhiteTemperature" defaultValue="false">
+				<Label>Supports White Temp:</Label>
+			</Field>
+            <Field id="set_temp_topic" type="textfield" defaultValue=""  visibleBindingId="SupportsWhiteTemperature" visibleBindingValue="true">
+                <Label>Set Color Temp Topic:</Label>
+            </Field>
+            <Field id="set_temp_template" type="textfield" defaultValue=""  visibleBindingId="SupportsWhiteTemperature" visibleBindingValue="true">
+                <Label>Set Color Temp Template:</Label>
+            </Field>
+            <Field id="color_temp_scale" type="menu" defaultValue="Kelvin" visibleBindingId="SupportsWhiteTemperature" visibleBindingValue="true">
+        		<Label>Device Color Temperature Units:</Label>
+        		<List>  
+        			<Option value="Kelvin">Degrees Kelvin</Option>
+        			<Option value="Mirek">Mirek (Reciprocal MegaKelvin)</Option>
+        		</List>
+        	</Field>
+
+            <Field id="devices_separator1" type="separator"/>
+            <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false">
+                <Label>Device supports status requests:</Label>
+            </Field>        	
+            <Field id="status_action_template" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
+                <Label>Status Request Topic:</Label>
+            </Field>
+            <Field id="status_action_payload" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
+                <Label>Status Request Payload:</Label>
+            </Field>
+            <Field id="devices_separator3" type="separator"/>
             <Field id="state_dict_payload_note" type="label" fontSize="small" fontColor="darkgray" visibleBindingId="state_location_payload_type" visibleBindingValue="json">
                 <Label>If the payload has a dict with multiple entries that should all be states of the device, enter the key(s) for that dict.  If top level, enter '.'.  If nested entry, enter each key with '.' between.</Label>
             </Field>
@@ -422,10 +632,10 @@
                 <Label>Device supports status requests:</Label>
             </Field>        	
             <Field id="status_action_template" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
-                <Label>Status Request Topic Template:</Label>
+                <Label>Status Request Topic:</Label>
             </Field>
             <Field id="status_action_payload" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
-                <Label>Status Request Payload Template:</Label>
+                <Label>Status Request Payload:</Label>
             </Field>
             <Field id="SupportsBatteryLevel" type="checkbox" defaultValue="false">
                 <Label>Device reports battery status:</Label>
@@ -567,10 +777,10 @@
                 <Label>Device supports status requests:</Label>
             </Field>        	
             <Field id="status_action_template" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
-                <Label>Status Request Topic Template:</Label>
+                <Label>Status Request Topic:</Label>
             </Field>
             <Field id="status_action_payload" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
-                <Label>Status Request Payload Template:</Label>
+                <Label>Status Request Payload:</Label>
             </Field>
             <Field id="SupportsBatteryLevel" type="checkbox" defaultValue="false">
                 <Label>Device reports battery level:</Label>
@@ -659,10 +869,10 @@
                 <Label>Device supports status requests:</Label>
             </Field>        	
             <Field id="status_action_template" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
-                <Label>Status Request Topic Template:</Label>
+                <Label>Status Request Topic:</Label>
             </Field>
             <Field id="status_action_payload" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
-                <Label>Status Request Payload Template:</Label>
+                <Label>Status Request Payload:</Label>
             </Field>
             <Field id="SupportsBatteryLevel" type="checkbox" defaultValue="false">
                 <Label>Device reports battery status:</Label>

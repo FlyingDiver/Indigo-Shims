@@ -6,7 +6,7 @@ props:
     SupportsEnergyMeterCurPower: false
     SupportsOnState: false
     SupportsSensorValue: true
-    SupportsStatusRequest: false
+    SupportsStatusRequest: true
     action_template: zigbee2mqtt/{{uniqueID}}/set
     dimmer_action_payload: '{"state": "ON", "brightness": {{brightness}} }'
     dimmer_action_template: zigbee2mqtt/{{uniqueID}}/set
@@ -16,7 +16,8 @@ props:
     state_location_payload_key: state
     state_location_payload_type: json
     state_location_topic_field: '0'
-    status_action_template: cmnd/{{uniqueID}}/Status
+    status_action_payload: '{"state": ""}'
+    status_action_template: zigbee2mqtt/{{uniqueID}}/get
     uid_location: topic
     uid_location_topic_field: '1'
     value_location_payload_key: brightness
