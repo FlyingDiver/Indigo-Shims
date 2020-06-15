@@ -1,23 +1,17 @@
 message_type: zigbee2mqtt
 type: shimDimmer
 props:
-    SupportsBatteryLevel: false
-    SupportsEnergyMeter: false
-    SupportsEnergyMeterCurPower: false
-    SupportsOnState: false
     SupportsSensorValue: true
     SupportsStatusRequest: true
     action_template: zigbee2mqtt/{{uniqueID}}/set
-    dimmer_action_payload: '{"state": "ON", "brightness": {{brightness}} }'
+    brightness_scale: '255'
+    dimmer_action_payload: '{"state":"ON","brightness":{{brightness}}}'
     dimmer_action_template: zigbee2mqtt/{{uniqueID}}/set
-    off_action_payload: '{"state": "OFF"}'
-    on_action_payload: '{"state": "ON"}'
     state_location: payload
     state_location_payload_key: state
     state_location_payload_type: json
-    state_location_topic_field: '0'
-    status_action_payload: '{"state": ""}'
-    status_action_template: zigbee2mqtt/{{uniqueID}}/get
+    status_action_payload: '{"state":""}'
+    status_action_template: zigbee2mqtt/{{uniqueID}}/set
     uid_location: topic
     uid_location_topic_field: '1'
     value_location_payload_key: brightness

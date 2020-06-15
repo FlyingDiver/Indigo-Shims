@@ -1,0 +1,31 @@
+message_type: zigbee2mqtt
+type: shimColor
+props:
+    SupportsColor: true
+    SupportsRGB: true
+    SupportsStatusRequest: true
+    SupportsWhite: true
+    SupportsWhiteTemperature: true
+    action_template: zigbee2mqtt/{{uniqueID}}/set
+    brightness_scale: '255'
+    color_temp_payload_key: color_temp
+    color_temp_scale: Mirek
+    color_value_payload_key: color
+    dimmer_action_payload: '{"state": "ON", "brightness": {{brightness}} }'
+    dimmer_action_template: zigbee2mqtt/{{uniqueID}}/set
+    rgb_scale: '255'
+    set_rgb_template: '{"state":"ON","brightness":{{brightness}},"color":{"r":{{redLevel}},"g":{{greenLevel}},"b":{{blueLevel}}}}'
+    set_rgb_topic: zigbee2mqtt/{{uniqueID}}/set
+    set_temp_template: '{"state":"ON","brightness":{{brightness}},"color_temp":{{color_temp}}}'
+    set_temp_topic: zigbee2mqtt/{{uniqueID}}/set
+    state_location: payload
+    state_location_payload_key: state
+    state_location_payload_type: json
+    status_action_payload: '{"state": ""}'
+    status_action_template: zigbee2mqtt/{{uniqueID}}/get
+    uid_location: topic
+    uid_location_topic_field: '1'
+    value_location_payload_key: brightness
+trigger:
+    match_list: '["Match: zigbee2mqtt", "Any: ", "End: "]'
+    queueMessage: true
