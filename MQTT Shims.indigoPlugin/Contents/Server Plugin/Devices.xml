@@ -458,11 +458,13 @@
             <Field id="set_rgb_template" type="textfield" defaultValue=""  visibleBindingId="SupportsRGB" visibleBindingValue="true">
                 <Label>Set RGB Payload:</Label>
             </Field>
-            <Field id="rgb_scale" type="menu" defaultValue="100" visibleBindingId="SupportsRGB" visibleBindingValue="true">
-        		<Label>Device RGB Scale:</Label>
+            <Field id="color_space" type="menu" defaultValue="Indigo" visibleBindingId="SupportsRGB" visibleBindingValue="true">
+        		<Label>Device Color Space:</Label>
         		<List>  
-        			<Option value="100">0-100</Option>
-        			<Option value="255">0-255</Option>
+        			<Option value="Indigo">Indigo (RGB 0-100)</Option>
+        			<Option value="HueA">Hue A (CIE1931 Gamut A)</Option>
+        			<Option value="HueB">Hue B (CIE1931 Gamut B)</Option>
+        			<Option value="HueC">Hue C (CIE1931 Gamut C)</Option>
         		</List>
         	</Field>
 
@@ -476,7 +478,7 @@
                 <Label>Set Color Temp Template:</Label>
             </Field>
             <Field id="color_temp_scale" type="menu" defaultValue="Kelvin" visibleBindingId="SupportsWhiteTemperature" visibleBindingValue="true">
-        		<Label>Device Color Temperature Units:</Label>
+        		<Label>Device Color Temperature:</Label>
         		<List>  
         			<Option value="Kelvin">Degrees Kelvin</Option>
         			<Option value="Mirek">Mirek (Reciprocal MegaKelvin)</Option>

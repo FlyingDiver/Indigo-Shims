@@ -8,7 +8,7 @@ import json
 import yaml
 import pystache
 from Queue import Queue
-from rgbxy import Converter
+from rgbxy import Converter, GamutA, GamutB, GamutC
 
 kCurDevVersCount = 0        # current version of plugin devices
 
@@ -32,7 +32,6 @@ class Plugin(indigo.PluginBase):
         self.indigo_log_handler.setLevel(self.logLevel)
         self.logger.threaddebug(u"logLevel = " + str(self.logLevel))
 
-
     def startup(self):
         indigo.server.log(u"Starting MQTT Shims")
         self.triggers = {}
@@ -45,11 +44,9 @@ class Plugin(indigo.PluginBase):
     def message_handler(self, notification):
         self.logger.debug(u"received notification of MQTT message type {} from {}".format(notification["message_type"], indigo.devices[int(notification["brokerID"])].name))
         self.messageQueue.put(notification)
-        
 
     def shutdown(self):
         indigo.server.log(u"Shutting down MQTT Shims")
-
 
     def deviceStartComm(self, device):
         self.logger.info(u"{}: Starting Device".format(device.name))
@@ -76,7 +73,6 @@ class Plugin(indigo.PluginBase):
         self.shimDevices.append(device.id)
         self.messageTypesWanted.append(device.pluginProps['message_type'])
 
-
     def deviceStopComm(self, device):
         self.logger.info(u"{}: Stopping Device".format(device.name))
         assert device.id in self.shimDevices
@@ -101,7 +97,6 @@ class Plugin(indigo.PluginBase):
         assert trigger.id in self.triggers
         del self.triggers[trigger.id]
 
-
     def runConcurrentThread(self):
         try:
             while True:
@@ -114,7 +109,6 @@ class Plugin(indigo.PluginBase):
                     
         except self.StopThread:
             pass        
-            
 
     def processMessages(self):
     
@@ -136,6 +130,80 @@ class Plugin(indigo.PluginBase):
                             self.logger.debug(u"{}: processMessages: '{}' {} -> {}".format(device.name, notification["message_type"], '/'.join(message_data["topic_parts"]), message_data["payload"]))
                             self.update(device, message_data)
 
+    # Convert a brightness value from the external device-specific value to Indigo scale
+    
+    def convert_brightness_import(self, device, brightness):
+        scale = device.pluginProps.get("brightness_scale", "100")
+        if scale == '255':
+            brightness = int(round(100.0 * (brightness / 255.0)))
+        return brightness
+        
+    # Convert a brightness value from Indigo scale to the external device-specific value
+
+    def convert_brightness_export(self, device, brightness):
+        scale = device.pluginProps.get("brightness_scale", "100")
+        if scale == '255':
+            brightness = int(round(255.0 * (brightness / 100.0)))
+        return brightness
+        
+    # Convert a color temperature value from the external device-specific value to Indigo scale
+    
+    def convert_color_temp_import(self, device, color_temp):
+        scale = device.pluginProps.get("color_temp_scale", "Kelvin")
+        if scale == "Mirek":
+            color_temp = int(round(1000000.0/color_temp))
+        return color_temp
+        
+    # Convert a color temperature value from Indigo scale to the external device-specific value
+
+    def convert_color_temp_export(self, device, color_temp):
+        scale = device.pluginProps.get("color_temp_scale", "Kelvin")
+        if scale == "Mirek":
+            color_temp = int(round(1000000.0/color_temp))
+        return color_temp
+        
+    # Convert a color space dict from the external device-specific value to Indigo space
+    
+    def convert_color_space_import(self, device, color_dict):
+        self.logger.debug(u"{}: convert_color_space_import input: {}".format(device.name, color_dict))
+        space = device.pluginProps.get("color_space", "Indigo")
+        if space == "Indigo":
+            return color_dict
+        else:
+            if space == "HueA":
+                converter = Converter(GamutA)
+            elif space == "HueB":
+                converter = Converter(GamutB)
+            elif space == "HueC":
+                converter = Converter(GamutC)
+                
+            redLevel, greenLevel, blueLevel = converter.xy_to_rgb(color_dict['x'], color_dict['y'])
+            self.logger.debug(u"{}: xy_to_rgb output: {} {} {}".format(device.name, redLevel, greenLevel, blueLevel))
+            output = {'redLevel': redLevel / 2.55, 'greenLevel': greenLevel / 2.55, 'blueLevel': blueLevel / 2.55}
+            self.logger.debug(u"{}: convert_color_space_import output: {}".format(device.name, output))
+            return output
+                
+    # Convert a color space dict from Indigo scale to the external device-specific value
+
+    def convert_color_space_export(self, device, color_dict):
+        self.logger.debug(u"{}: convert_color_space_export input: {}".format(device.name, color_dict))
+        space = device.pluginProps.get("color_space", "Indigo")
+        if space == "Indigo":
+            return color_dict
+        else:
+            if space == "HueA":
+                converter = Converter(GamutA)
+            elif space == "HueB":
+                converter = Converter(GamutB)
+            elif space == "HueC":
+                converter = Converter(GamutC)
+        
+            x, y = converter.rgb_to_xy(2.55 * color_dict['redLevel'], 2.55 * color_dict['greenLevel'], 2.55 * color_dict['blueLevel'])
+            self.logger.debug(u"{}: rgb_to_xy output: {} {}".format(device.name, x, y))
+            output = {'x': x, 'y': y}
+            self.logger.debug(u"{}: convert_color_space_export output: {}".format(device.name, output))
+            return output        
+        
     
     def update(self, device, message_data):    
         try:
@@ -282,18 +350,12 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u"{}: state = {}".format(device.name, state))
 
             value_key = device.pluginProps['value_location_payload_key']
-            value = self.recurseDict(value_key, state_data)
-            self.logger.debug(u"{}: shimDimmer, state_key = {}, value_key = {}, data = {}, state = {}, value = {}".format(device.name, state_key, value_key, state_data, state, value))
-            if value != None:
-
-                scale = device.pluginProps.get("brightness_scale", "100")
-                if scale == '100':
-                    pass                
-                elif scale == '255':
-                    value = int(round(value/2.55))
-
-                self.logger.debug(u"{}: Updating brightnessLevel to {}".format(device.name, value))
-                device.updateStateOnServer(key='brightnessLevel', value=value)
+            brightness = self.recurseDict(value_key, state_data)
+            self.logger.debug(u"{}: shimDimmer, state_key = {}, value_key = {}, data = {}, state = {}, brightness = {}".format(device.name, state_key, value_key, state_data, state, brightness ))
+            if brightness != None:
+                brightness = self.convert_brightness_import(device, brightness)
+                self.logger.debug(u"{}: Updating brightnessLevel to {}".format(device.name, brightness))
+                device.updateStateOnServer(key='brightnessLevel', value=brightness)
             else:
                 if state.lower() in ['off', 'false', '0']:
                     state = False
@@ -368,11 +430,7 @@ class Plugin(indigo.PluginBase):
                 device.updateStateOnServer(key='onOffState', value=state)
             
             else:
-                scale = device.pluginProps.get("brightness_scale", "100")
-                if scale == '100':
-                    pass                
-                elif scale == '255':
-                    brightness = int(round(brightness/2.55))
+                brightness = self.convert_brightness_import(device, brightness)
                 self.logger.debug(u"{}: Updating brightnessLevel to {}".format(device.name, brightness))
                 device.updateStateOnServer(key='brightnessLevel', value=brightness)
 
@@ -381,47 +439,21 @@ class Plugin(indigo.PluginBase):
             color_value_key = device.pluginProps['color_value_payload_key']
             color_values = self.recurseDict(color_value_key, state_data)            
             if color_values:
-                scale = device.pluginProps.get("rgb_scale", "100")
+                color_values = self.convert_color_space_import(device, color_values)
+                
                 state_list = []
-                self.logger.debug(u"{}: Updating color temperature to {}".format(device.name, color_values))
-                
-                # lots of different ways the color could be reported.  Check some common patterns.
-                if 'r' in color_values and 'g' in color_values and 'b' in color_values:
-
-                    if scale == "100":
-                        state_list.append({'key':'redLevel',   'value':color_values['r']})
-                        state_list.append({'key':'greenLevel', 'value':color_values['g']})
-                        state_list.append({'key':'blueLevel',  'value':color_values['b']})
-                    elif scale == '255':
-                        state_list.append({'key':'redLevel',   'value':int(round(color_values['r']/2.55))})
-                        state_list.append({'key':'greenLevel', 'value':int(round(color_values['g']/2.55))})
-                        state_list.append({'key':'blueLevel',  'value':int(round(color_values['b']/2.55))})
-                
-                elif 'x' in color_values and 'y' in color_values:
-
-                    converter = Converter()
-                    r, g, b = converter.xy_to_rgb(color_values['x'], color_values['y'])
-
-                    if scale == "100":
-                        state_list.append({'key':'redLevel',   'value': r})
-                        state_list.append({'key':'greenLevel', 'value': g})
-                        state_list.append({'key':'blueLevel',  'value': b})
-                    elif scale == '255':
-                        state_list.append({'key':'redLevel',   'value':int(round(r/2.55))})
-                        state_list.append({'key':'greenLevel', 'value':int(round(g/2.55))})
-                        state_list.append({'key':'blueLevel',  'value':int(round(b/2.55))})
-
+                self.logger.debug(u"{}: Updating color values to {}".format(device.name, color_values))
+                state_list.append({'key':'redLevel',   'value':color_values['redLevel']})
+                state_list.append({'key':'greenLevel', 'value':color_values['greenLevel']})
+                state_list.append({'key':'blueLevel',  'value':color_values['blueLevel']})
                 self.logger.debug(u"{}: Updating states: {}".format(device.name, state_list))
                 device.updateStatesOnServer(state_list)
             
             color_temp_key = device.pluginProps['color_temp_payload_key']
             color_temp = self.recurseDict(color_temp_key, state_data)            
+            
             if color_temp:
-                scale = device.pluginProps.get("color_temp_scale", "Kelvin")
-                if scale == "Kelvin":
-                    pass
-                elif scale == "Mirek":
-                    color_temp = int(round(1000000.0/color_temp))
+                color_temp = self.convert_color_temp_import(device, color_temp)
                 self.logger.debug(u"{}: Updating color temperature to {}".format(device.name, color_temp))
                 device.updateStateOnServer(key='whiteTemperature', value=color_temp)            
 
@@ -843,18 +875,11 @@ class Plugin(indigo.PluginBase):
                 self.logger.error(u"{}: actionControlDevice: no action template".format(device.name))
                 return
 
-            payload =  device.pluginProps.get("toggle_action_payload", "off")
+            payload =  device.pluginProps.get("toggle_action_payload", "toggle")
             topic = pystache.render(action_template, {'uniqueID': device.address})
             self.publish_topic(device, topic, payload)
 
         elif action.deviceAction == indigo.kDeviceAction.SetBrightness:
-            brightness = action.actionValue
-            scale = device.pluginProps.get("brightness_scale", "100")
-            if scale == '100':
-                pass                
-            elif scale == '255':
-                brightness = int(round(255.0 * (brightness / 100.0)))
-
             action_template =  device.pluginProps.get("dimmer_action_template", None)
             if not action_template:
                 self.logger.error(u"{}: actionControlDevice: no action template".format(device.name))
@@ -864,7 +889,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.error(u"{}: actionControlDevice: no payload template".format(device.name))
                 return
                 
-            payload_data = {'brightness': brightness}
+            payload_data = {'brightness': self.convert_brightness_export(device, action.actionValue)}
             topic = pystache.render(action_template, {'uniqueID': device.address})
             payload = pystache.render(payload_template, payload_data)
             self.publish_topic(device, topic, payload)
@@ -872,28 +897,12 @@ class Plugin(indigo.PluginBase):
         elif action.deviceAction == indigo.kDeviceAction.SetColorLevels:
         
             actionColorVals = action.actionValue
-            self.logger.debug(u"{}: actionColorVals: '{}'".format(device.name, actionColorVals))
+            payload_data = {}
 
-            brightness = device.brightness
-            scale = device.pluginProps.get("brightness_scale", "100")
-            if scale == '100':
-                pass                
-            elif scale == '255':
-                brightness = int(round(255.0 * (brightness / 100.0)))
-            payload_data = {'brightness': brightness}
+            payload_data["brightness"] = self.convert_brightness_export(device, device.brightness)
 
-            if device.supportsWhiteTemperature and 'whiteTemperature' in actionColorVals:
+            if device.supportsWhiteTemperature and 'whiteTemperature' in action.actionValue:
 
-                colorTemp = float(actionColorVals['whiteTemperature']) 
-                self.logger.debug(u"{}: SetColorLevels, changing color temperature to: {}".format(device.name, colorTemp))
-                scale = device.pluginProps.get("color_temp_scale", "Kelvin")
-                if scale == "Kelvin":
-                    pass
-                elif scale == "Mirek":
-                    colorTemp = int(round(1000000.0/colorTemp))
-                    
-                payload_data["color_temp"] = colorTemp
-                
                 action_template =  device.pluginProps.get("set_temp_topic", None)
                 if not action_template:
                     self.logger.error(u"{}: actionControlDevice: no topic template for setting color temperature".format(device.name))
@@ -902,19 +911,10 @@ class Plugin(indigo.PluginBase):
                 if not payload_template:
                     self.logger.error(u"{}: actionControlDevice: no payload template for setting color temperature".format(device.name))
                     return
+                payload_data["color_temp"] = self.convert_color_temp_export(device, float(action.actionValue['whiteTemperature']))
            
-            elif device.supportsRGB and 'redLevel' in actionColorVals:
+            elif device.supportsRGB and 'redLevel' in action.actionValue:
 
-                for color in ['redLevel', 'greenLevel', 'blueLevel']:
-                    colorVal = float(actionColorVals[color]) 
-                    scale = device.pluginProps.get("rgb_scale", "100")
-                    if scale == "100":
-                        pass
-                    elif scale == '255':
-                        colorVal = int(round(255.0 * (colorVal / 100.0)))
-                        
-                    payload_data[color] = colorVal
-                            
                 action_template =  device.pluginProps.get("set_rgb_topic", None)
                 if not action_template:
                     self.logger.error(u"{}: actionControlDevice: no topic template for setting RGB color".format(device.name))
@@ -923,6 +923,11 @@ class Plugin(indigo.PluginBase):
                 if not payload_template:
                     self.logger.error(u"{}: actionControlDevice: no payload template for setting RGB color".format(device.name))
                     return
+
+                new_colors = self.convert_color_space_export(device, action.actionValue)
+                for key in new_colors:
+                    payload_data[key] = new_colors[key]
+
             else:
                 self.logger.debug(u"{}: SetColorLevels, unsupported color change".format(device.name))
                 return
@@ -1026,7 +1031,11 @@ class Plugin(indigo.PluginBase):
                 continue
             if value in ['', None]:
                 continue
+            if value == False:
+                continue
+                
             props[key] = device.pluginProps[key]
+            
         template['props'] = props
 
         for trigger in indigo.triggers:
