@@ -901,7 +901,7 @@ class Plugin(indigo.PluginBase):
 
         elif action.deviceAction == indigo.kDeviceAction.BrightenBy:
 
-            newBrightness = dev.brightness + action.actionValue
+            newBrightness = device.brightness + action.actionValue
             if newBrightness > 100:
                 newBrightness = 100
 
@@ -920,7 +920,7 @@ class Plugin(indigo.PluginBase):
             self.publish_topic(device, topic, payload)
 
         elif action.deviceAction == indigo.kDeviceAction.DimBy:
-            newBrightness = dev.brightness - action.actionValue
+            newBrightness = device.brightness - action.actionValue
             if newBrightness < 0:
                 newBrightness = 0
 
