@@ -450,7 +450,7 @@ class Plugin(indigo.PluginBase):
                 states_list.append({'key':'redLevel',   'value':color_values['redLevel']})
                 states_list.append({'key':'greenLevel', 'value':color_values['greenLevel']})
                 states_list.append({'key':'blueLevel',  'value':color_values['blueLevel']})
-                self.logger.debug(u"{}: Updating states: {}".format(device.name, state_list))
+                self.logger.debug(u"{}: Updating states: {}".format(device.name, states_list))
             
             color_temp_key = device.pluginProps['color_temp_payload_key']
             color_temp = self.recurseDict(color_temp_key, state_data)            
