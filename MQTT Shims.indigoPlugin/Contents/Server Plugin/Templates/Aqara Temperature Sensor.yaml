@@ -1,0 +1,21 @@
+type: shimValueSensor
+message_type: '##AqaraTemp##'
+props:
+    SupportsBatteryLevel: true
+    SupportsSensorValue: true
+    battery_payload_key: battery
+    battery_payload_type: json
+    configDone: true
+    reports_battery_status: true
+    shimSensorPrecision: '1'
+    shimSensorSubtype: Temperature-C
+    state_dict_payload_key: .
+    state_location: payload
+    state_location_payload_key: temperature
+    state_location_payload_type: json
+    state_location_topic_field: '0'
+    uid_location: topic
+    uid_location_topic_field: '2'
+trigger:
+    match_list: '["Match: zigbee2mqtt", "Match: AqaraTemp", "Any: ", "End: "]'
+    queueMessage: true

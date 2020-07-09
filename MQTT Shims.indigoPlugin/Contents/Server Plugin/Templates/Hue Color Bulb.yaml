@@ -1,31 +1,35 @@
 type: shimColor
-message_type: zigbee2mqtt
+message_type: '##HueBulb##'
 props:
     SupportsColor: true
     SupportsRGB: true
     SupportsStatusRequest: true
     SupportsWhite: true
     SupportsWhiteTemperature: true
-    action_template: zigbee2mqtt/{{uniqueID}}/set
+    action_template: zigbee2mqtt/HueBulb/{{uniqueID}}/set
     brightness_scale: '255'
+    color_space: HueC
     color_temp_payload_key: color_temp
     color_temp_scale: Mirek
     color_value_payload_key: color
     dimmer_action_payload: '{"state": "ON", "brightness": {{brightness}} }'
-    dimmer_action_template: zigbee2mqtt/{{uniqueID}}/set
+    dimmer_action_template: zigbee2mqtt/HueBulb/{{uniqueID}}/set
+    off_action_payload: 'OFF'
+    on_action_payload: 'ON'
     rgb_scale: '255'
-    set_rgb_template: '{"state":"ON","brightness":{{brightness}},"color":{"r":{{redLevel}},"g":{{greenLevel}},"b":{{blueLevel}}}}'
-    set_rgb_topic: zigbee2mqtt/{{uniqueID}}/set
+    set_rgb_template: '{"state":"ON","brightness":{{brightness}},"color":{"x":{{x}},"y":{{y}}}}'
+    set_rgb_topic: zigbee2mqtt/HueBulb/{{uniqueID}}/set
     set_temp_template: '{"state":"ON","brightness":{{brightness}},"color_temp":{{color_temp}}}'
-    set_temp_topic: zigbee2mqtt/{{uniqueID}}/set
+    set_temp_topic: zigbee2mqtt/HueBulb/{{uniqueID}}/set
     state_location: payload
     state_location_payload_key: state
     state_location_payload_type: json
+    state_location_topic_field: '0'
     status_action_payload: '{"state": ""}'
-    status_action_template: zigbee2mqtt/{{uniqueID}}/get
+    status_action_template: zigbee2mqtt/HueBulb/{{uniqueID}}/get
     uid_location: topic
-    uid_location_topic_field: '1'
+    uid_location_topic_field: '2'
     value_location_payload_key: brightness
 trigger:
-    match_list: '["Match: zigbee2mqtt", "Any: ", "End: "]'
+    match_list: '["Match: zigbee2mqtt", "Match: HueBulb", "Any: ", "End: "]'
     queueMessage: true

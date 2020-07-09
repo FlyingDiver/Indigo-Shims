@@ -1,0 +1,17 @@
+type: shimOnOffSensor
+message_type: '##AqaraOpple##'
+props:
+    SupportsOnState: true
+    SupportsStatusRequest: true
+    battery_payload_type: json
+    shimSensorSubtype: Generic
+    state_dict_payload_key: .
+    state_location: payload
+    state_location_payload_key: click
+    state_location_payload_type: json
+    state_location_topic_field: '0'
+    uid_location: topic
+    uid_location_topic_field: '2'
+trigger:
+    match_list: '["Match: zigbee2mqtt", "Match: AqaraOpple", "Any: ", "End: "]'
+    queueMessage: true
