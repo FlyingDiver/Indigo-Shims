@@ -1,0 +1,27 @@
+type: shimRelay
+message_type: '##Plug##'
+props:
+    SupportsEnergyMeter: true
+    SupportsEnergyMeterCurPower: true
+    SupportsOnState: true
+    SupportsSensorValue: true
+    SupportsStatusRequest: true
+    action_template: zigbee2mqtt/Plug/{{uniqueID}}/set
+    energy_payload_key: energy
+    off_action_payload: '{"state": "OFF"}'
+    on_action_payload: '{"state": "ON"}'
+    power_payload_key: power
+    shimSensorSubtype: Power
+    state_dict_payload_key: .
+    state_location: payload
+    state_location_payload_key: state
+    state_location_payload_type: json
+    state_location_topic_field: '0'
+    state_on_value: 'ON'
+    status_action_template: zigbee2mqtt/Plug/{{uniqueID}}/get
+    toggle_action_payload: toggle
+    uid_location: topic
+    uid_location_topic_field: '2'
+trigger:
+    match_list: '["Match: zigbee2mqtt", "Match: Plug", "Any: ", "End: "]'
+    queueMessage: true
