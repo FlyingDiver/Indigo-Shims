@@ -13,6 +13,14 @@ from rgbxy import Converter, GamutA, GamutB, GamutC
 kCurDevVersCount = 0        # current version of plugin devices
 
 
+# Indigo really doesn't like dicts with keys that start with a number or symbol...
+def safeKey(key):
+    if not key[0].isalpha():
+        return 'sk' + key
+    else:
+        return key
+        
+
 ################################################################################
 class Plugin(indigo.PluginBase):
 
@@ -331,8 +339,9 @@ class Plugin(indigo.PluginBase):
             new_states = indigo.List()                
             states_list = []
             for key in states_dict:
-                new_states.append(key)
-                states_list.append({'key': key, 'value': states_dict[key], 'decimalPlaces': 2})
+                safe_key = safeKey(key)
+                new_states.append(safe_key)
+                states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
             if old_states != new_states:
                 self.logger.threaddebug(u"{}: update, new states_list: {}".format(device.name, new_states))
                 newProps = device.pluginProps
@@ -404,8 +413,9 @@ class Plugin(indigo.PluginBase):
             old_states =  device.pluginProps.get("states_list", indigo.List())
             new_states = indigo.List()                
             for key in multi_states_dict:
-                new_states.append(key)
-                states_list.append({'key': key, 'value': states_dict[key], 'decimalPlaces': 2})
+                safe_key = safeKey(key)
+                new_states.append(safe_key)
+                states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
             if old_states != new_states:
                 self.logger.threaddebug(u"{}: update, new states_list: {}".format(device.name, new_states))
                 newProps = device.pluginProps
@@ -498,8 +508,9 @@ class Plugin(indigo.PluginBase):
             new_states = indigo.List()                
             states_list = []
             for key in states_dict:
-                new_states.append(key)
-                states_list.append({'key': key, 'value': states_dict[key], 'decimalPlaces': 2})
+                safe_key = safeKey(key)
+                new_states.append(safe_key)
+                states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
             if old_states != new_states:
                 self.logger.threaddebug(u"{}: update, new states_list: {}".format(device.name, new_states))
                 newProps = device.pluginProps
@@ -586,8 +597,9 @@ class Plugin(indigo.PluginBase):
             new_states = indigo.List()                
             states_list = []
             for key in states_dict:
-                new_states.append(key)
-                states_list.append({'key': key, 'value': states_dict[key], 'decimalPlaces': 2})
+                safe_key = safeKey(key)
+                new_states.append(safe_key)
+                states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
             if old_states != new_states:
                 self.logger.threaddebug(u"{}: update, new states_list: {}".format(device.name, new_states))
                 newProps = device.pluginProps
@@ -710,8 +722,9 @@ class Plugin(indigo.PluginBase):
             new_states = indigo.List()                
             states_list = []
             for key in states_dict:
-                new_states.append(key)
-                states_list.append({'key': key, 'value': states_dict[key], 'decimalPlaces': 2})
+                safe_key = safeKey(key)
+                new_states.append(safe_key)
+                states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
             if old_states != new_states:
                 self.logger.threaddebug(u"{}: update, new states_list: {}".format(device.name, new_states))
                 newProps = device.pluginProps
@@ -758,8 +771,9 @@ class Plugin(indigo.PluginBase):
             new_states = indigo.List()                
             states_list = []
             for key in states_dict:
-                new_states.append(key)
-                states_list.append({'key': key, 'value': states_dict[key], 'decimalPlaces': 2})
+                safe_key = safeKey(key)
+                new_states.append(safe_key)
+                states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
             if old_states != new_states:
                 self.logger.threaddebug(u"{}: update, new states_list: {}".format(device.name, new_states))
                 newProps = device.pluginProps
