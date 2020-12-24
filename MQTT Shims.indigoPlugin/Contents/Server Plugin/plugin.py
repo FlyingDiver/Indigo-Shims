@@ -446,7 +446,7 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u"{}: No brightnessLevel, setting onOffState to {}".format(device.name, state))
             states_list.append({'key': 'onOffState', 'value': state})
             
-            if brightness != None:
+            if brightness != None and state:
                 brightness = self.convert_brightness_import(device, brightness)
                 self.logger.debug(u"{}: Updating brightnessLevel to {}".format(device.name, brightness))
                 states_list.append({'key': 'brightnessLevel', 'value': brightness})
