@@ -344,7 +344,7 @@ class Plugin(indigo.PluginBase):
                     new_states.append(safe_key)
                     if type(states_dict[key]) in (int, bool, str):
                         states_list.append({'key': safe_key, 'value': states_dict[key]})
-                    if type(states_dict[key]) in (float):
+                    elif isinstance(type(states_dict[key]), float):
                         states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
                     else:
                         states_list.append({'key': safe_key, 'value': json.dumps(states_dict[key])})
@@ -426,7 +426,7 @@ class Plugin(indigo.PluginBase):
                     new_states.append(safe_key)
                     if type(states_dict[key]) in (int, bool, str):
                         states_list.append({'key': safe_key, 'value': states_dict[key]})
-                    if type(states_dict[key]) in (float):
+                    elif isinstance(type(states_dict[key]), float):
                         states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
                     else:
                         states_list.append({'key': safe_key, 'value': json.dumps(states_dict[key])})
@@ -529,7 +529,7 @@ class Plugin(indigo.PluginBase):
                     new_states.append(safe_key)
                     if type(states_dict[key]) in (int, bool, str):
                         states_list.append({'key': safe_key, 'value': states_dict[key]})
-                    if type(states_dict[key]) in (float):
+                    elif isinstance(type(states_dict[key]), float):
                         states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
                     else:
                         states_list.append({'key': safe_key, 'value': json.dumps(states_dict[key])})
@@ -629,7 +629,7 @@ class Plugin(indigo.PluginBase):
                     new_states.append(safe_key)
                     if type(states_dict[key]) in (int, bool, str):
                         states_list.append({'key': safe_key, 'value': states_dict[key]})
-                    if type(states_dict[key]) in (float):
+                    elif isinstance(type(states_dict[key]), float):
                         states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
                     else:
                         states_list.append({'key': safe_key, 'value': json.dumps(states_dict[key])})
@@ -818,7 +818,7 @@ class Plugin(indigo.PluginBase):
                     new_states.append(safe_key)
                     if type(states_dict[key]) in (int, bool, str):
                         states_list.append({'key': safe_key, 'value': states_dict[key]})
-                    if type(states_dict[key]) in (float):
+                    elif isinstance(type(states_dict[key]), float):
                         states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
                     else:
                         states_list.append({'key': safe_key, 'value': json.dumps(states_dict[key])})
