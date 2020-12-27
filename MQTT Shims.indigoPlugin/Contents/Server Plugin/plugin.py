@@ -417,9 +417,9 @@ class Plugin(indigo.PluginBase):
                 self.logger.warning(u"{}: Possible device config error, Multi-States Key {} returns empty dict.".format(device.name, states_key))
                 return
              
-            states_list = []
             old_states =  device.pluginProps.get("states_list", indigo.List())
             new_states = indigo.List()                
+            states_list = []
             for key in states_dict:
                 if states_dict[key] != None:
                     safe_key = safeKey(key)
@@ -620,6 +620,9 @@ class Plugin(indigo.PluginBase):
                 self.logger.warning(u"{}: Possible device config error, Multi-States Key {} returns empty dict.".format(device.name, states_key))
                 return
              
+            old_states =  device.pluginProps.get("states_list", indigo.List())
+            new_states = indigo.List()                
+            states_list = []
             for key in states_dict:
                 if states_dict[key] != None:
                     safe_key = safeKey(key)
@@ -813,15 +816,6 @@ class Plugin(indigo.PluginBase):
                 if states_dict[key] != None:
                     safe_key = safeKey(key)
                     new_states.append(safe_key)
-                    states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
-
-            old_states =  device.pluginProps.get("states_list", indigo.List())
-            new_states = indigo.List()                
-            states_list = []
-            for key in states_dict:
-                if states_dict[key] != None:
-                    safe_key = safeKey(key)
-                    new_states.append(safe_key)
                     if type(states_dict[key]) in (int, bool, str):
                         states_list.append({'key': safe_key, 'value': states_dict[key]})
                     if type(states_dict[key]) in (float):
@@ -830,7 +824,6 @@ class Plugin(indigo.PluginBase):
                         states_list.append({'key': safe_key, 'value': json.dumps(states_dict[key])})
 
             if old_states != new_states:
-                self.logger.threaddebug(u"{}: update, new states_list: {}".format(device.name, new_states))
                 self.logger.threaddebug(u"{}: update, new_states: {}".format(device.name, new_states))
                 self.logger.threaddebug(u"{}: update, states_list: {}".format(device.name, states_list))
                 newProps["states_list"] = new_states
