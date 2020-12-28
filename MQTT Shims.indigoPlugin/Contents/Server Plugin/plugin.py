@@ -50,7 +50,7 @@ class Plugin(indigo.PluginBase):
         indigo.server.subscribeToBroadcast(u"com.flyingdiver.indigoplugin.mqtt", u"com.flyingdiver.indigoplugin.mqtt-message_queued", "message_handler")
 
     def message_handler(self, notification):
-        self.logger.debug(u"received notification of MQTT message type {} from {}".format(notification["message_type"], indigo.devices[int(notification["brokerID"])].name))
+        self.logger.debug(u"message_handler: MQTT message {} from {}".format(notification["message_type"], indigo.devices[int(notification["brokerID"])].name))
         self.messageQueue.put(notification)
 
     def shutdown(self):
@@ -136,7 +136,8 @@ class Plugin(indigo.PluginBase):
                         device = indigo.devices[deviceID]
                         if device.pluginProps['message_type'] == notification["message_type"]:
                             self.logger.debug(u"{}: processMessages: '{}' {} -> {}".format(device.name, notification["message_type"], '/'.join(message_data["topic_parts"]), message_data["payload"]))
-                            self.update(device, message_data)
+                            self.update(device, message_data["topic_parts"],  message_data["payload"])
+
 
     # Convert a brightness value from the external device-specific value to Indigo scale
     
@@ -213,259 +214,214 @@ class Plugin(indigo.PluginBase):
             return output        
         
     
-    def update(self, device, message_data):    
-        try:
-            if device.pluginProps['uid_location'] == "topic":
-                message_address = message_data["topic_parts"][int(device.pluginProps['uid_location_topic_field'])]
-                self.logger.threaddebug(u"{}: update topic message_address = {}".format(device.name, message_address))
-            elif device.pluginProps['uid_location'] == "payload":
-                try:
-                    payload = json.loads(message_data["payload"])
-                except:
-                    self.logger.debug(u"{}: JSON decode error for uid_location = payload, aborting".format(device.name))
-                    return
-                message_address = payload[device.pluginProps['uid_location_payload_key']]
-                self.logger.debug(u"{}: update json message_address = {}".format(device.name, message_address))
-            else:
-                self.logger.debug(u"{}: update can't determine address location".format(device.name))
+    def update(self, device, topic_parts, payload):    
+       
+        # first determine the UID (address) for this message
+        
+        if device.pluginProps.get('uid_location', None) == "topic":
+            try:
+                topic_field = int(device.pluginProps['uid_location_topic_field'])
+            except:
+                self.logger.error(u"{}: error on uid_location_topic_field, aborting".format(device.name))
                 return
-        except Exception as e:
-            self.logger.error(u"{}: Failed to find Unique ID in '{}': {}".format(device.name, device.pluginProps['uid_location'], e))
+            try:
+                uid = topic_parts[topic_field]
+            except:
+                self.logger.error(u"{}: error obtaining uid value, aborting".format(device.name))
+                return
+
+        elif device.pluginProps['uid_location'] == "payload":
+            try:
+                json_payload = json.loads(message_data["payload"])
+            except:
+                self.logger.error(u"{}: JSON decode error for uid_location = payload, aborting".format(device.name))
+                return
+            try:
+                uid_location_payload_key = device.pluginProps['uid_location_payload_key']
+            except:
+                self.logger.error(u"{}: error on uid_location_payload_key, aborting".format(device.name))
+                return
+            try:
+                uid = json_payload[uid_location_payload_key]
+            except:
+                self.logger.error(u"{}: error obtaining uid value, aborting".format(device.name))
+                return
+            
+        else:
+            self.logger.error(u"{}: update can't determine address location".format(device.name))
             return
             
-        if device.pluginProps['address'] != message_address:
-            self.logger.debug(u"{}: update address mismatch: {} != {}".format(device.name, device.pluginProps['address'], message_address))
-            return
-
-
-        try:
-            if device.pluginProps.get('state_location', None) == "topic":
-                i = int(device.pluginProps['state_location_topic'])
-                self.logger.threaddebug(u"{}: update state_location_topic = {}".format(device.name, i))
-                state_key = 'value'
-                state_data = { state_key : message_data["topic_parts"][i] }
-                
-                
-            elif (device.pluginProps.get('state_location', None) == "payload") and (device.pluginProps.get('state_location_payload_type', None) == "raw"):
-                state_key = 'value'
-                state_data = { state_key : message_data["payload"]}
-
-            elif (device.pluginProps.get('state_location', None) == "payload") and (device.pluginProps.get('state_location_payload_type', None) == "json"):
-                state_key = device.pluginProps.get('state_location_payload_key', None)
-                try:
-                    state_data = json.loads(message_data["payload"])
-                except:
-                    self.logger.debug(u"{}: JSON decode error for state_location = payload, aborting".format(device.name))
-                    return
-                self.logger.threaddebug(u"{}: update state_location_payload, key = {}".format(device.name, state_key))
-                
-            else:
-                self.logger.debug(u"{}: update can't determine value location".format(device.name))
-            
-        except Exception as e:
-            self.logger.error(u"{}: update error determining message value: {}".format(device.name, e))
+        if device.pluginProps['address'] != uid:
+            self.logger.debug(u"{}: update uid mismatch: {} != {}".format(device.name, device.pluginProps['address'], uid))
             return
         
-        if device.deviceTypeId == "shimRelay":
-            value = self.recurseDict(state_key, state_data)
-            self.logger.debug(u"{}: shimRelay, state_key = {}, state_data = {}, value = {}".format(device.name, state_key, state_data, value))
-            if value == None:
-                self.logger.debug(u"{}: state_key {} not found in payload".format(device.name, state_key))
+        # Determine state (value) location, if any.  Generic Shims don't have a value.
+        
+        if device.pluginProps.get('state_location', None) == "topic":
+            try:
+                topic_field = int(device.pluginProps['state_location_topic'])
+            except:
+                self.logger.error(u"{}: error on state_location_topic, aborting".format(device.name))
                 return
+            
+            try:
+                state_value = topic_parts[topic_field]
+            except:
+                self.logger.error(u"{}: error obtaining state value, aborting".format(device.name))
+                return
+           
+        elif (device.pluginProps.get('state_location', None) == "payload") and (device.pluginProps.get('state_location_payload_type', None) == "raw"):
+            state_value = payload
+
+        elif (device.pluginProps.get('state_location', None) == "payload") and (device.pluginProps.get('state_location_payload_type', None) == "json"):
+            try:
+                state_key = device.pluginProps['state_location_payload_key']
+            except:
+                self.logger.error(u"{}: error on state_location_payload_key, aborting".format(device.name))
+                return
+            try:
+                state_data = json.loads(payload)
+            except:
+                self.logger.error(u"{}: JSON decode error for state_location = payload, aborting".format(device.name))
+                return
+            try:
+                state_value = self.recurseDict(state_key, state_data)
+            except:
+                self.logger.error(u"{}: state_key {} not found in state_data {} aborting".format(device.name, state_key, state_data))
+                return
+            
+        else:
+            state_value = None
+
+        # these are supported for all devices
+        
+        if bool(device.pluginProps.get('SupportsBatteryLevel', False)):
+            battery = self.recurseDict(device.pluginProps['battery_payload_key'], state_data)
+            device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
+
+        if bool(device.pluginProps.get('SupportsEnergyMeter', False)) and ("accumEnergyTotal" in device.states):
+            energy = self.recurseDict(device.pluginProps['energy_payload_key'], state_data)
+            device.updateStateOnServer('accumEnergyTotal', energy, uiValue='{} kWh'.format(energy))
+
+        if bool(device.pluginProps.get('SupportsEnergyMeterCurPower', False)) and  ("curEnergyLevel" in device.states):
+            power = self.recurseDict(device.pluginProps['power_payload_key'], state_data)
+            device.updateStateOnServer('curEnergyLevel', power, uiValue='{} W'.format(power))
+
+        # do multi-states processing
+        
+        self.logger.debug(u"{}: Raw payload = {}".format(device.name, payload))
+
+        states_key = device.pluginProps.get('state_dict_payload_key', None)
+        if states_key:
+            try:
+                data = json.loads(payload)
+            except:
+                self.logger.debug(u"{}: JSON decode error for payload, aborting".format(device.name))
+                return
+            self.logger.debug(u"{}: Decoded payload = {}".format(device.name, data))
+            states_dict = self.recurseDict(states_key, data)
+            self.logger.debug(u"{}: states_dict = {}".format(device.name, states_dict))
+            if type(states_dict) != dict:
+                self.logger.error(u"{}: Device config error, bad Multi-States Key value: {}".format(device.name, states_key))
+                states_dict = None
+                
+            if not len(states_dict) > 0:
+                self.logger.warning(u"{}: Possible device config error, Multi-States Key {} returns empty dict.".format(device.name, states_key))
+                states_dict = None
+                
+            if states_dict:
+                states_list = []         
+                old_states =  device.pluginProps.get("states_list", indigo.List())
+                new_states = indigo.List()                
+                for key in states_dict:
+                    if states_dict[key] != None:
+                        safe_key = safeKey(key)
+                        new_states.append(safe_key)
+                        self.logger.debug(u"{}: adding to states_list: {}, {}, {}".format(device.name, safe_key, states_dict[key], type(states_dict[key])))
+                        if type(states_dict[key]) in (int, bool):
+                            states_list.append({'key': safe_key, 'value': states_dict[key]})
+                        if type(states_dict[key]) in (str, unicode):
+                            states_list.append({'key': safe_key, 'value': states_dict[key]})
+#                            states_list.append({'key': safe_key, 'value': str(states_dict[key])})
+                        elif isinstance(type(states_dict[key]), float):
+                            states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
+                        else:
+                            states_list.append({'key': safe_key, 'value': json.dumps(states_dict[key])})
+
+                if old_states != new_states:
+                    self.logger.threaddebug(u"{}: update, new_states: {}".format(device.name, new_states))
+                    self.logger.threaddebug(u"{}: update, states_list: {}".format(device.name, states_list))
+                    newProps = device.pluginProps
+                    newProps["states_list"] = new_states
+                    device.replacePluginPropsOnServer(newProps)
+                    device.stateListOrDisplayStateIdChanged()    
+                device.updateStatesOnServer(states_list)
+
+            
+        # Device type specific processing.  No entry for ShimGeneric, it's all handled above
+        
+        if device.deviceTypeId in ["shimRelay", "shimOnOffSensor"]:
             
             on_value = device.pluginProps.get('state_on_value', None)
             if not on_value:
-                if value.lower() in ['off', 'false', '0']:
-                    value = False
+                if state_value.lower() in ['off', 'false', '0']:
+                    isOn = False
                 else:
-                    value = True
+                    isOn = True
             else:
-                value = (value == on_value)
-            self.logger.debug(u"{}: Updating state to {}".format(device.name, value))
+                isOn = (state_value == on_value)
+
+            self.logger.debug(u"{}: Updating state to {}".format(device.name, isOn))
+            device.updateStateOnServer(key='onOffState', value=isOn)
 
             if device.pluginProps["shimSensorSubtype"] == "Generic":
-                device.updateStateOnServer(key='onOffState', value=value)
-                if value:
+                if isOn:
                     device.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
                 else:
                     device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
 
             elif device.pluginProps["shimSensorSubtype"] == "MotionSensor":
-                device.updateStateOnServer(key='onOffState', value=value)
-                if value:
+                if isOn:
                     device.updateStateImageOnServer(indigo.kStateImageSel.MotionSensorTripped)
                 else:
                     device.updateStateImageOnServer(indigo.kStateImageSel.MotionSensor)
                 
             elif device.pluginProps["shimSensorSubtype"] == "Power":
-                device.updateStateOnServer(key='onOffState', value=value)
-                if value:
+                if isOn:
                     device.updateStateImageOnServer(indigo.kStateImageSel.PowerOn)
                 else:
                     device.updateStateImageOnServer(indigo.kStateImageSel.PowerOff)
 
-            if bool(device.pluginProps.get('SupportsBatteryLevel', False)):
-                battery = self.recurseDict(device.pluginProps['battery_payload_key'], state_data)
-                device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
+            elif device.pluginProps["shimSensorSubtype"] == "Light":
+                if isOn:
+                    device.updateStateImageOnServer(indigo.kStateImageSel.DimmerOn)
+                else:
+                    device.updateStateImageOnServer(indigo.kStateImageSel.DimmerOff)
 
-            if bool(device.pluginProps.get('SupportsEnergyMeter', False)) and ("accumEnergyTotal" in device.states):
-                energy = self.recurseDict(device.pluginProps['energy_payload_key'], state_data)
-                device.updateStateOnServer('accumEnergyTotal', energy, uiValue='{} kWh'.format(energy))
-
-            if bool(device.pluginProps.get('SupportsEnergyMeterCurPower', False)) and  ("curEnergyLevel" in device.states):
-                power = self.recurseDict(device.pluginProps['power_payload_key'], state_data)
-                device.updateStateOnServer('curEnergyLevel', power, uiValue='{} W'.format(power))
-
-            states_key = device.pluginProps.get('state_dict_payload_key', None)
-            if not states_key:
-                return
-            try:
-                data = json.loads(message_data["payload"])
-            except:
-                self.logger.debug(u"{}: JSON decode error for payload, aborting".format(device.name))
-                return
-            self.logger.threaddebug(u"{}: update state_dict_payload_key, key = {}".format(device.name, states_key))
-            states_dict = self.recurseDict(states_key, data)
-            if not states_dict:
-                return
-            elif type(states_dict) != dict:
-                self.logger.error(u"{}: Device config error, bad Multi-States Key value: {}".format(device.name, states_key))
-                return
-            elif not len(states_dict) > 0:
-                self.logger.warning(u"{}: Possible device config error, Multi-States Key {} returns empty dict.".format(device.name, states_key))
-                return
-             
-            old_states =  device.pluginProps.get("states_list", indigo.List())
-            new_states = indigo.List()                
-            states_list = []
-            for key in states_dict:
-                if states_dict[key] != None:
-                    safe_key = safeKey(key)
-                    new_states.append(safe_key)
-                    if type(states_dict[key]) in (int, bool, str):
-                        states_list.append({'key': safe_key, 'value': states_dict[key]})
-                    elif isinstance(type(states_dict[key]), float):
-                        states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
-                    else:
-                        states_list.append({'key': safe_key, 'value': json.dumps(states_dict[key])})
-
-            if old_states != new_states:
-                self.logger.threaddebug(u"{}: update, new_states: {}".format(device.name, new_states))
-                self.logger.threaddebug(u"{}: update, states_list: {}".format(device.name, states_list))
-                newProps = device.pluginProps
-                newProps["states_list"] = new_states
-                device.replacePluginPropsOnServer(newProps)
-                device.stateListOrDisplayStateIdChanged()    
-            device.updateStatesOnServer(states_list)
-
-
-        elif device.deviceTypeId == "shimDimmer":
-            state = self.recurseDict(state_key, state_data)
-            if state == None:
-                self.logger.debug(u"{}: state_key {} not found in payload".format(device.name, state_key))
-                return 
-            self.logger.debug(u"{}: state = {}".format(device.name, state))
-            states_list = []
-
-            value_key = device.pluginProps['value_location_payload_key']
-            brightness = self.recurseDict(value_key, state_data)
-            self.logger.debug(u"{}: shimDimmer, state_key = {}, value_key = {}, data = {}, state = {}, brightness = {}".format(device.name, state_key, value_key, state_data, state, brightness ))
-
-            if state.lower() in ['off', 'false', '0']:
-                state = False
-            else:
-                state = True
-            self.logger.debug(u"{}: Setting onOffState to {}".format(device.name, state))
-            states_list.append({'key': 'onOffState', 'value': state})
-
-            if brightness != None and state:
-                brightness = self.convert_brightness_import(device, brightness)
-                self.logger.debug(u"{}: Updating brightnessLevel to {}".format(device.name, brightness))
-                states_list.append({'key': 'brightnessLevel', 'value': brightness})
-
-            if bool(device.pluginProps.get('SupportsBatteryLevel', False)):
-                battery = self.recurseDict(device.pluginProps['battery_payload_key'], state_data)
-                states_list.append({'key': 'batteryLevel', 'value': battery, 'uiValue': '{}%'.format(battery)})
-
-            if bool(device.pluginProps.get('SupportsEnergyMeter', False)) and ("accumEnergyTotal" in device.states):
-                energy = self.recurseDict(device.pluginProps['energy_payload_key'], state_data)
-                states_list.append({'key': 'accumEnergyTotal', 'value': energy, 'uiValue': '{} kWh'.format(energy)})
-
-            if bool(device.pluginProps.get('SupportsEnergyMeterCurPower', False)) and  ("curEnergyLevel" in device.states):
-                power = self.recurseDict(device.pluginProps['power_payload_key'], state_data)
-                device.updateStateOnServer('curEnergyLevel', power, uiValue='{} W'.format(power))
-                states_list.append({'key': 'curEnergyLevel', 'value': power, 'uiValue': '{} W'.format(power)})
                 
-            device.updateStatesOnServer(states_list)
-
-            states_key = device.pluginProps.get('state_dict_payload_key', None)
-            if not states_key:
-                return
-            try:
-                data = json.loads(message_data["payload"])
-            except:
-                self.logger.debug(u"{}: JSON decode error for payload, aborting".format(device.name))
-                return
-            self.logger.threaddebug(u"{}: update state_dict_payload_key, key = {}".format(device.name, states_key))
-            states_dict = self.recurseDict(states_key, data)
-            if not states_dict:
-                return
-            elif type(states_dict) != dict:
-                self.logger.error(u"{}: Device config error, bad Multi-States Key value: {}".format(device.name, states_key))
-                return
-            elif not len(states_dict) > 0:
-                self.logger.warning(u"{}: Possible device config error, Multi-States Key {} returns empty dict.".format(device.name, states_key))
-                return
-             
-            old_states =  device.pluginProps.get("states_list", indigo.List())
-            new_states = indigo.List()                
-            states_list = []
-            for key in states_dict:
-                if states_dict[key] != None:
-                    safe_key = safeKey(key)
-                    new_states.append(safe_key)
-                    if type(states_dict[key]) in (int, bool, str):
-                        states_list.append({'key': safe_key, 'value': states_dict[key]})
-                    elif isinstance(type(states_dict[key]), float):
-                        states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
-                    else:
-                        states_list.append({'key': safe_key, 'value': json.dumps(states_dict[key])})
-
-            if old_states != new_states:
-                self.logger.threaddebug(u"{}: update, new_states: {}".format(device.name, new_states))
-                self.logger.threaddebug(u"{}: update, states_list: {}".format(device.name, states_list))
-                newProps = device.pluginProps
-                newProps["states_list"] = new_states
-                device.replacePluginPropsOnServer(newProps)
-                device.stateListOrDisplayStateIdChanged()    
-            device.updateStatesOnServer(states_list)
-
-            
-        elif device.deviceTypeId == "shimColor":
-            state = self.recurseDict(state_key, state_data)
-            if state == None:
-                self.logger.debug(u"{}: state_key {} not found in payload".format(device.name, state_key))
-                return 
-            self.logger.debug(u"{}: state = {}".format(device.name, state))
+        if device.deviceTypeId in ["shimDimmer", "shimColor"]:
             states_list = []
 
             value_key = device.pluginProps['value_location_payload_key']
             brightness = self.recurseDict(value_key, state_data)
-            self.logger.debug(u"{}: shimColor, state_key = {}, value_key = {}, data = {}, state = {}, value = {}".format(device.name, state_key, value_key, state_data, state, brightness))
+            self.logger.debug(u"{}: shimDimmer, state_key = {}, value_key = {}, data = {}, state = {}, brightness = {}".format(device.name, state_key, value_key, state_data, state_value, brightness ))
 
-            if state.lower() in ['off', 'false', '0']:
-                state = False
+            if state_value.lower() in ['off', 'false', '0']:
+                isOn = False
             else:
-                state = True
-            self.logger.debug(u"{}: No brightnessLevel, setting onOffState to {}".format(device.name, state))
-            states_list.append({'key': 'onOffState', 'value': state})
-            
-            if brightness != None and state:
+                isOn = True
+            self.logger.debug(u"{}: Setting onOffState to {}".format(device.name, isOn))
+            states_list.append({'key': 'onOffState', 'value': isOn})
+
+            if brightness != None and isOn:
                 brightness = self.convert_brightness_import(device, brightness)
                 self.logger.debug(u"{}: Updating brightnessLevel to {}".format(device.name, brightness))
-                states_list.append({'key': 'brightnessLevel', 'value': brightness})
+                states_list.append({'key': 'brightnessLevel', 'value': brightness})                
+            device.updateStatesOnServer(states_list)
 
-            # look for color information
+            
+        if device.deviceTypeId == "shimColor":
+            states_list = []
             
             color_value_key = device.pluginProps['color_value_payload_key']
             color_values = self.recurseDict(color_value_key, state_data)            
@@ -485,187 +441,25 @@ class Plugin(indigo.PluginBase):
                 color_temp = self.convert_color_temp_import(device, color_temp)
                 self.logger.debug(u"{}: Updating color temperature to {}".format(device.name, color_temp))
                 states_list.append({'key': 'whiteTemperature', 'value': color_temp})
-
-            if bool(device.pluginProps.get('SupportsBatteryLevel', False)):
-                battery = self.recurseDict(device.pluginProps['battery_payload_key'], state_data)
-                states_list.append({'key': 'batteryLevel', 'value': battery, 'uiValue': '{}%'.format(battery)})
-
-            if bool(device.pluginProps.get('SupportsEnergyMeter', False)) and ("accumEnergyTotal" in device.states):
-                energy = self.recurseDict(device.pluginProps['energy_payload_key'], state_data)
-                states_list.append({'key': 'accumEnergyTotal', 'value': energy, 'uiValue': '{} kWh'.format(energy)})
-
-            if bool(device.pluginProps.get('SupportsEnergyMeterCurPower', False)) and  ("curEnergyLevel" in device.states):
-                power = self.recurseDict(device.pluginProps['power_payload_key'], state_data)
-                states_list.append({'key': 'curEnergyLevel', 'value': power, 'uiValue': '{} W'.format(power)})
-
-            device.updateStatesOnServer(states_list)
-
-
-            states_key = device.pluginProps.get('state_dict_payload_key', None)
-            if not states_key:
-                return
-            try:
-                data = json.loads(message_data["payload"])
-            except:
-                self.logger.debug(u"{}: JSON decode error for payload, aborting".format(device.name))
-                return
-            self.logger.threaddebug(u"{}: update state_dict_payload_key, key = {}".format(device.name, states_key))
-            states_dict = self.recurseDict(states_key, data)
-            if not states_dict:
-                return
-            elif type(states_dict) != dict:
-                self.logger.error(u"{}: Device config error, bad Multi-States Key value: {}".format(device.name, states_key))
-                return
-            elif not len(states_dict) > 0:
-                self.logger.warning(u"{}: Possible device config error, Multi-States Key {} returns empty dict.".format(device.name, states_key))
-                return
-             
-            old_states =  device.pluginProps.get("states_list", indigo.List())
-            new_states = indigo.List()                
-            states_list = []
-            for key in states_dict:
-                if states_dict[key] != None:
-                    safe_key = safeKey(key)
-                    new_states.append(safe_key)
-                    if type(states_dict[key]) in (int, bool, str):
-                        states_list.append({'key': safe_key, 'value': states_dict[key]})
-                    elif isinstance(type(states_dict[key]), float):
-                        states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
-                    else:
-                        states_list.append({'key': safe_key, 'value': json.dumps(states_dict[key])})
-
-            if old_states != new_states:
-                self.logger.threaddebug(u"{}: update, new_states: {}".format(device.name, new_states))
-                self.logger.threaddebug(u"{}: update, states_list: {}".format(device.name, states_list))
-                newProps = device.pluginProps
-                newProps["states_list"] = new_states
-                device.replacePluginPropsOnServer(newProps)
-                device.stateListOrDisplayStateIdChanged()    
             device.updateStatesOnServer(states_list)
 
             
-        elif device.deviceTypeId == "shimOnOffSensor":
-            value = self.recurseDict(state_key, state_data)
-            self.logger.debug(u"{}: shimOnOffSensor, state_key = {}, data = {}, value = {}".format(device.name, state_key, state_data, value))
-            states_list = []
-
-            on_value = device.pluginProps.get('state_on_value', None)
-            if not on_value:
-                if value in ['off', 'Off', 'OFF', False, '0', 0]:
-                    value = False
-                else:
-                    value = True
-            else:
-                value = (value == on_value)
-            self.logger.debug(u"{}: Updating state to {}".format(device.name, value))
-            states_list.append({'key': 'onOffState', 'value': value})
-
-            if device.pluginProps["shimSensorSubtype"] == "Generic":
-                if value:
-                    device.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
-                else:
-                    device.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
-
-            elif device.pluginProps["shimSensorSubtype"] == "MotionSensor":
-                if value:
-                    device.updateStateImageOnServer(indigo.kStateImageSel.MotionSensorTripped)
-                else:
-                    device.updateStateImageOnServer(indigo.kStateImageSel.MotionSensor)
-                
-            elif device.pluginProps["shimSensorSubtype"] == "Light":
-                if value:
-                    device.updateStateImageOnServer(indigo.kStateImageSel.DimmerOn)
-                else:
-                    device.updateStateImageOnServer(indigo.kStateImageSel.DimmerOff)
-
-            elif device.pluginProps["shimSensorSubtype"] == "Power":
-                if value:
-                    device.updateStateImageOnServer(indigo.kStateImageSel.PowerOn)
-                else:
-                    device.updateStateImageOnServer(indigo.kStateImageSel.PowerOff)
-                    
-            else:
-                self.logger.debug(u"{}: update, unknown shimSensorSubtype: {}".format(device.name, device.pluginProps["shimSensorSubtype"]))
-
-            if bool(device.pluginProps.get('SupportsBatteryLevel', False)):
-                battery = self.recurseDict(device.pluginProps['battery_payload_key'], state_data)
-                states_list.append({'key': 'batteryLevel', 'value': battery, 'uiValue': '{}%'.format(battery)})
-
-            if bool(device.pluginProps.get('SupportsEnergyMeter', False)) and ("accumEnergyTotal" in device.states):
-                energy = self.recurseDict(device.pluginProps['energy_payload_key'], state_data)
-                states_list.append({'key': 'accumEnergyTotal', 'value': energy, 'uiValue': '{} kWh'.format(energy)})
-
-            if bool(device.pluginProps.get('SupportsEnergyMeterCurPower', False)) and  ("curEnergyLevel" in device.states):
-                power = self.recurseDict(device.pluginProps['power_payload_key'], state_data)
-                states_list.append({'key': 'curEnergyLevel', 'value': power, 'uiValue': '{} W'.format(power)})
-
-            device.updateStatesOnServer(states_list)
-
-            states_key = device.pluginProps.get('state_dict_payload_key', None)
-            if not states_key:
-                return
+        if device.deviceTypeId == "shimValueSensor":
             try:
-                data = json.loads(message_data["payload"])
-            except:
-                self.logger.debug(u"{}: JSON decode error for payload, aborting".format(device.name))
-                return
-            self.logger.threaddebug(u"{}: update state_dict_payload_key, key = {}".format(device.name, states_key))
-            states_dict = self.recurseDict(states_key, data)
-            if not states_dict:
-                return
-            elif type(states_dict) != dict:
-                self.logger.error(u"{}: Device config error, bad Multi-States Key value: {}".format(device.name, states_key))
-                return
-            elif not len(states_dict) > 0:
-                self.logger.warning(u"{}: Possible device config error, Multi-States Key {} returns empty dict.".format(device.name, states_key))
-                return
-             
-            old_states =  device.pluginProps.get("states_list", indigo.List())
-            new_states = indigo.List()                
-            states_list = []
-            for key in states_dict:
-                if states_dict[key] != None:
-                    safe_key = safeKey(key)
-                    new_states.append(safe_key)
-                    if type(states_dict[key]) in (int, bool, str):
-                        states_list.append({'key': safe_key, 'value': states_dict[key]})
-                    elif isinstance(type(states_dict[key]), float):
-                        states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
-                    else:
-                        states_list.append({'key': safe_key, 'value': json.dumps(states_dict[key])})
-
-            if old_states != new_states:
-                self.logger.threaddebug(u"{}: update, new_states: {}".format(device.name, new_states))
-                self.logger.threaddebug(u"{}: update, states_list: {}".format(device.name, states_list))
-                newProps = device.pluginProps
-                newProps["states_list"] = new_states
-                device.replacePluginPropsOnServer(newProps)
-                device.stateListOrDisplayStateIdChanged()    
-            device.updateStatesOnServer(states_list)
-
-                
-        elif device.deviceTypeId == "shimValueSensor":
-            value = self.recurseDict(state_key, state_data)
-            self.logger.debug(u"{}: shimValueSensor, key = {}, data = {}, value = {}".format(device.name, state_key, state_data, value))
-            if value == None:
-                self.logger.debug(u"{}: state_key {} not found in payload".format(device.name, state_key))
-                return
-            try:
-                value = float(value)
+                value = float(state_value)
             except (TypeError, ValueError) as e:
-                self.logger.error(u"{}: update unable to convert '{}' to float: {}".format(device.name, value, e))
+                self.logger.error(u"{}: update unable to convert '{}' to float: {}".format(device.name, state_value, e))
                 return
                            
             function = device.pluginProps.get("adjustmentFunction", None)            
             self.logger.threaddebug(u"{}: update adjustmentFunction: '{}'".format(device.name, function))
             if function:
-                prohibited = ['indigo', 'requests', 'pyserial', 'oauthlib']
+                prohibited = ['indigo', 'requests', 'pyserial', 'oauthlib', 'os', 'logging', 'json', 'yaml', 'pystache', 'Queue']
                 if any(x in function for x in prohibited):
                     self.logger.warning(u"{}: Invalid method in adjustmentFunction: '{}'".format(device.name, function))
                 else:
                     x = value
                     value = eval(function)
-
             self.logger.debug(u"{}: Updating state to {}".format(device.name, value))
     
             if device.pluginProps["shimSensorSubtype"] == "Generic":
@@ -721,133 +515,13 @@ class Plugin(indigo.PluginBase):
             else:
                 self.logger.debug(u"{}: update, unknown shimSensorSubtype: {}".format(device.name, device.pluginProps["shimSensorSubtype"]))
 
-            if bool(device.pluginProps.get('SupportsBatteryLevel', False)):
-                battery = self.recurseDict(device.pluginProps['battery_payload_key'], state_data)
-                device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
-
-            if bool(device.pluginProps.get('SupportsEnergyMeter', False)) and ("accumEnergyTotal" in device.states):
-                energy = self.recurseDict(device.pluginProps['energy_payload_key'], state_data)
-                device.updateStateOnServer('accumEnergyTotal', energy, uiValue='{} kWh'.format(energy))
-
-            if bool(device.pluginProps.get('SupportsEnergyMeterCurPower', False)) and  ("curEnergyLevel" in device.states):
-                power = self.recurseDict(device.pluginProps['power_payload_key'], state_data)
-                device.updateStateOnServer('curEnergyLevel', power, uiValue='{} W'.format(power))
-
-            states_key = device.pluginProps.get('state_dict_payload_key', None)
-            if not states_key:
-                return
-            try:
-                data = json.loads(message_data["payload"])
-            except:
-                self.logger.debug(u"{}: JSON decode error for payload, aborting".format(device.name))
-                return
-            self.logger.threaddebug(u"{}: update state_dict_payload_key, key = {}".format(device.name, states_key))
-            states_dict = self.recurseDict(states_key, data)
-            if not states_dict:
-                return
-            elif type(states_dict) != dict:
-                self.logger.error(u"{}: Device config error, bad Multi-States Key value: {}".format(device.name, states_key))
-                return
-            elif not len(states_dict) > 0:
-                self.logger.warning(u"{}: Possible device config error, Multi-States Key {} returns empty dict.".format(device.name, states_key))
-                return
-             
-            old_states =  device.pluginProps.get("states_list", indigo.List())
-            new_states = indigo.List()                
-            states_list = []
-            for key in states_dict:
-                if states_dict[key] != None:
-                    safe_key = safeKey(key)
-                    new_states.append(safe_key)
-                    if type(states_dict[key]) in (int, bool, str):
-                        states_list.append({'key': safe_key, 'value': states_dict[key]})
-                    elif isinstance(type(states_dict[key]), float):
-                        states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
-                    else:
-                        states_list.append({'key': safe_key, 'value': json.dumps(states_dict[key])})
-
-            if old_states != new_states:
-                self.logger.threaddebug(u"{}: update, new_states: {}".format(device.name, new_states))
-                self.logger.threaddebug(u"{}: update, states_list: {}".format(device.name, states_list))
-                newProps = device.pluginProps
-                newProps["states_list"] = new_states
-                device.replacePluginPropsOnServer(newProps)
-                device.stateListOrDisplayStateIdChanged()    
-            device.updateStatesOnServer(states_list)
-
-
-        elif device.deviceTypeId == "shimGeneric":
-
-            if bool(device.pluginProps.get('SupportsBatteryLevel', False)):
-                battery = self.recurseDict(device.pluginProps['battery_payload_key'], state_data)
-                device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
-
-            if bool(device.pluginProps.get('SupportsEnergyMeter', False)) and ("accumEnergyTotal" in device.states):
-                energy = self.recurseDict(device.pluginProps['energy_payload_key'], state_data)
-                device.updateStateOnServer('accumEnergyTotal', energy, uiValue='{} kWh'.format(energy))
-
-            if bool(device.pluginProps.get('SupportsEnergyMeterCurPower', False)) and  ("curEnergyLevel" in device.states):
-                power = self.recurseDict(device.pluginProps['power_payload_key'], state_data)
-                device.updateStateOnServer('curEnergyLevel', power, uiValue='{} W'.format(power))
-
-            states_key = device.pluginProps.get('state_dict_payload_key', None)
-            if not states_key:
-                return
-            try:
-                data = json.loads(message_data["payload"])
-            except:
-                self.logger.debug(u"{}: JSON decode error for payload, aborting".format(device.name))
-                return
-            self.logger.threaddebug(u"{}: update state_dict_payload_key, key = {}".format(device.name, states_key))
-            states_dict = self.recurseDict(states_key, data)
-            if not states_dict:
-                return
-            elif type(states_dict) != dict:
-                self.logger.error(u"{}: Device config error, bad Multi-States Key value: {}".format(device.name, states_key))
-                return
-            elif not len(states_dict) > 0:
-                self.logger.warning(u"{}: Possible device config error, Multi-States Key {} returns empty dict.".format(device.name, states_key))
-                return
-             
-            old_states =  device.pluginProps.get("states_list", indigo.List())
-            new_states = indigo.List()                
-            states_list = []
-            for key in states_dict:
-                if states_dict[key] != None:
-                    safe_key = safeKey(key)
-                    new_states.append(safe_key)
-                    if type(states_dict[key]) in (int, bool, str):
-                        states_list.append({'key': safe_key, 'value': states_dict[key]})
-                    elif isinstance(type(states_dict[key]), float):
-                        states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
-                    else:
-                        states_list.append({'key': safe_key, 'value': json.dumps(states_dict[key])})
-
-            if old_states != new_states:
-                self.logger.threaddebug(u"{}: update, new_states: {}".format(device.name, new_states))
-                self.logger.threaddebug(u"{}: update, states_list: {}".format(device.name, states_list))
-                newProps = device.pluginProps
-                newProps["states_list"] = new_states
-                device.replacePluginPropsOnServer(newProps)
-                device.stateListOrDisplayStateIdChanged()    
-            device.updateStatesOnServer(states_list)
-
-        else:
-            self.logger.warning(u"{}: Invalid device type: {}".format(device.name, device.deviceTypeId))
-
         # Now do any triggers
 
         for trigger in self.triggers.values():
             if trigger.pluginProps["shimDevice"] == str(device.id):
                 if trigger.pluginTypeId == "deviceUpdated":
                     indigo.trigger.execute(trigger)                    
-                elif trigger.pluginTypeId == "stateUpdated":
-                    state_name = trigger.pluginProps["deviceState"]
-                    if state_name in states_dict:
-                        indigo.trigger.execute(trigger)                    
- 
- 
-            
+                                                        
     def recurseDict(self, key_string, data_dict):
         self.logger.threaddebug(u"recurseDict key_string = {}, data_dict= {}".format(key_string, data_dict))
         try:
