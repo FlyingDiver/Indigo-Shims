@@ -826,6 +826,7 @@ class Plugin(indigo.PluginBase):
             if old_states != new_states:
                 self.logger.threaddebug(u"{}: update, new_states: {}".format(device.name, new_states))
                 self.logger.threaddebug(u"{}: update, states_list: {}".format(device.name, states_list))
+                newProps = device.pluginProps
                 newProps["states_list"] = new_states
                 device.replacePluginPropsOnServer(newProps)
                 device.stateListOrDisplayStateIdChanged()    
