@@ -1,0 +1,14 @@
+type: shimGeneric
+message_type: '##AqaraDoubleRocker##'
+props:
+    SupportsBatteryLevel: true
+    battery_payload_key: battery
+    reports_battery_status: true
+    state_dict_payload_key: .
+    state_location: payload
+    state_location_payload_type: json
+    uid_location: topic
+    uid_location_topic_field: '1'
+trigger:
+    match_list: '["Match: zigbee2mqtt", "Match: AqaraDoubleRocker1"]'
+    queueMessage: true
