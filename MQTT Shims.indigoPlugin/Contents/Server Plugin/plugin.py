@@ -497,6 +497,16 @@ class Plugin(indigo.PluginBase):
                 device.updateStateImageOnServer(indigo.kStateImageSel.EnergyMeterOn)
                 device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} W'.format(value, prec=precision))
 
+			elif device.pluginProps["shimSensorSubtype"] == "Voltage":
+				precision = device.pluginProps.get("shimSensorPrecision", "2")
+				device.updateStateImageOnServer(indigo.kStateImageSel.EnergyMeterOn)
+				device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} V'.format(value, prec=precision))
+
+			elif device.pluginProps["shimSensorSubtype"] == "Current":
+				precision = device.pluginProps.get("shimSensorPrecision", "2")
+				device.updateStateImageOnServer(indigo.kStateImageSel.EnergyMeterOn)
+				device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} A'.format(value, prec=precision))
+				
             elif device.pluginProps["shimSensorSubtype"] == "Luminance":
                 precision = device.pluginProps.get("shimSensorPrecision", "0")
                 device.updateStateImageOnServer(indigo.kStateImageSel.LightSensorOn)
@@ -521,6 +531,10 @@ class Plugin(indigo.PluginBase):
             if trigger.pluginProps["shimDevice"] == str(device.id):
                 if trigger.pluginTypeId == "deviceUpdated":
                     indigo.trigger.execute(trigger)                    
+                elif trigger.pluginTypeId == "stateUpdated":
+                    state_name = trigger.pluginProps["deviceState"]
+                    if state_name in states_dict:
+                        indigo.trigger.execute(trigger)                    
                                                         
     def recurseDict(self, key_string, data_dict):
         self.logger.threaddebug(u"recurseDict key_string = {}, data_dict= {}".format(key_string, data_dict))
