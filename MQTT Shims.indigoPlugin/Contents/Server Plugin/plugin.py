@@ -348,7 +348,7 @@ class Plugin(indigo.PluginBase):
                         else:
                             states_list.append({'key': safe_key, 'value': json.dumps(states_dict[key])})
 
-                if old_states != new_states:
+                if set(old_states) != set(new_states):
                     self.logger.threaddebug(u"{}: update, new_states: {}".format(device.name, new_states))
                     self.logger.threaddebug(u"{}: update, states_list: {}".format(device.name, states_list))
                     newProps = device.pluginProps
