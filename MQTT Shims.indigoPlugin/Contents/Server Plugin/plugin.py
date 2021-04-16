@@ -447,8 +447,8 @@ class Plugin(indigo.PluginBase):
         if device.deviceTypeId == "shimValueSensor":
             try:
                 value = float(state_value)
-            except (TypeError, ValueError) as e:
-                self.logger.error(u"{}: update unable to convert '{}' to float: {}".format(device.name, state_value, e))
+            except (TypeError, ValueError):
+                self.logger.error(u"{}: update() is unable to convert '{}' to float".format(device.name, state_value))
                 return
                            
             function = device.pluginProps.get("adjustmentFunction", None)            
