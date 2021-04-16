@@ -497,16 +497,16 @@ class Plugin(indigo.PluginBase):
                 device.updateStateImageOnServer(indigo.kStateImageSel.EnergyMeterOn)
                 device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} W'.format(value, prec=precision))
 
-			elif device.pluginProps["shimSensorSubtype"] == "Voltage":
-				precision = device.pluginProps.get("shimSensorPrecision", "2")
-				device.updateStateImageOnServer(indigo.kStateImageSel.EnergyMeterOn)
-				device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} V'.format(value, prec=precision))
+            elif device.pluginProps["shimSensorSubtype"] == "Voltage":
+                precision = device.pluginProps.get("shimSensorPrecision", "2")
+                device.updateStateImageOnServer(indigo.kStateImageSel.EnergyMeterOn)
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} V'.format(value, prec=precision))
 
-			elif device.pluginProps["shimSensorSubtype"] == "Current":
-				precision = device.pluginProps.get("shimSensorPrecision", "2")
-				device.updateStateImageOnServer(indigo.kStateImageSel.EnergyMeterOn)
-				device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} A'.format(value, prec=precision))
-				
+            elif device.pluginProps["shimSensorSubtype"] == "Current":
+                precision = device.pluginProps.get("shimSensorPrecision", "2")
+                device.updateStateImageOnServer(indigo.kStateImageSel.EnergyMeterOn)
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} A'.format(value, prec=precision))
+                
             elif device.pluginProps["shimSensorSubtype"] == "Luminance":
                 precision = device.pluginProps.get("shimSensorPrecision", "0")
                 device.updateStateImageOnServer(indigo.kStateImageSel.LightSensorOn)
