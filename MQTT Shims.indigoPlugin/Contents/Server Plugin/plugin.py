@@ -362,14 +362,19 @@ class Plugin(indigo.PluginBase):
         
         if device.deviceTypeId in ["shimRelay", "shimOnOffSensor"]:
             
-            on_value = device.pluginProps.get('state_on_value', None)
-            if not on_value:
-                if state_value.lower() in ['off', 'false', '0']:
-                    isOn = False
-                else:
-                    isOn = True
+            if isinstance(state_value, bool):
+                isOn = state_value
+            elif isinstance(state_value, int):
+                isOn = int(state_value)
             else:
-                isOn = (state_value == on_value)
+                on_value = device.pluginProps.get('state_on_value', None)
+                if not on_value:
+                    if state_value.lower() in ['off', 'false', '0']:
+                        isOn = False
+                    else:
+                        isOn = True
+                else:
+                    isOn = (state_value == on_value)
 
             self.logger.debug(u"{}: Updating state to {}".format(device.name, isOn))
             device.updateStateOnServer(key='onOffState', value=isOn)
