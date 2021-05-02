@@ -257,16 +257,10 @@ class Plugin(indigo.PluginBase):
             
         # get the JSON payload, if there is one
 
-        if (device.pluginProps.get('state_location', None) == "payload") and (device.pluginProps.get('state_location_payload_type', None) == "json"):
+        try:
+            state_data = json.loads(payload)
+        except:
             state_data = None
-            try:
-                state_key = device.pluginProps['state_location_payload_key']
-            except:
-                self.logger.error(u"{}: error on state_location_payload_key".format(device.name))
-            try:
-                state_data = json.loads(payload)
-            except:
-                self.logger.error(u"{}: JSON decode error for state_location = payload".format(device.name))
                     
         # Determine state (value) location, if any.  Generic Shims don't have a value.
         
@@ -290,7 +284,7 @@ class Plugin(indigo.PluginBase):
         elif (device.pluginProps.get('state_location', None) == "payload") and (device.pluginProps.get('state_location_payload_type', None) == "json"):
         
             if not state_data:
-                self.logger.error(u"{}: No state_data for json payload key".format(device.name))
+                self.logger.error(u"{}: No JSON payload data for state_value".format(device.name))
                 return
             
             try:
@@ -326,6 +320,7 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(u"{}: Raw payload = {}".format(device.name, payload))
 
         states_key = device.pluginProps.get('state_dict_payload_key', None)
+        self.logger.debug(u"{}: states_key= {}".format(device.name, states_key))
         if states_key:
             try:
                 data = json.loads(payload)
