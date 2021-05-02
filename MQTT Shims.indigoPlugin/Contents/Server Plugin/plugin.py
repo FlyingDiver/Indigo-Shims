@@ -48,6 +48,8 @@ class Plugin(indigo.PluginBase):
         self.messageQueue = Queue()
         self.mqttPlugin = indigo.server.getPlugin("com.flyingdiver.indigoplugin.mqtt")
         indigo.server.subscribeToBroadcast(u"com.flyingdiver.indigoplugin.mqtt", u"com.flyingdiver.indigoplugin.mqtt-message_queued", "message_handler")
+        if not self.mqttPlugin.isEnabled():
+            self.logger.warning(u"MQTT Connector plugin not enabled!")
 
     def message_handler(self, notification):
         self.logger.debug(u"message_handler: MQTT message {} from {}".format(notification["message_type"], indigo.devices[int(notification["brokerID"])].name))
@@ -108,12 +110,8 @@ class Plugin(indigo.PluginBase):
     def runConcurrentThread(self):
         try:
             while True:
-                if not self.mqttPlugin.isEnabled():
-                    self.logger.error(u"processMessages: MQTT Connector plugin not enabled, aborting.")
-                    self.sleep(60)
-                else:        
-                    self.processMessages()                
-                    self.sleep(0.1)
+                self.processMessages()                
+                self.sleep(0.1)
                     
         except self.StopThread:
             pass        
