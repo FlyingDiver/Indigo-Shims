@@ -257,7 +257,10 @@ class Plugin(indigo.PluginBase):
         
         # Determine state (value) location, if any.  Generic Shims don't have a value.
         
-        if device.pluginProps.get('state_location', None) == "topic":
+        if device.deviceTypeId == "shimGeneric":
+            pass
+
+        elif device.pluginProps.get('state_location', None) == "topic":
             try:
                 topic_field = int(device.pluginProps['state_location_topic'])
             except:
