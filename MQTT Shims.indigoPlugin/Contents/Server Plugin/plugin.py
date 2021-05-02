@@ -254,7 +254,20 @@ class Plugin(indigo.PluginBase):
         if device.pluginProps['address'] != uid:
             self.logger.debug(u"{}: update uid mismatch: {} != {}".format(device.name, device.pluginProps['address'], uid))
             return
-        
+            
+        # get the JSON payload, if there is one
+
+        if (device.pluginProps.get('state_location', None) == "payload") and (device.pluginProps.get('state_location_payload_type', None) == "json"):
+            state_data = None
+            try:
+                state_key = device.pluginProps['state_location_payload_key']
+            except:
+                self.logger.error(u"{}: error on state_location_payload_key".format(device.name))
+            try:
+                state_data = json.loads(payload)
+            except:
+                self.logger.error(u"{}: JSON decode error for state_location = payload".format(device.name))
+                    
         # Determine state (value) location, if any.  Generic Shims don't have a value.
         
         if device.deviceTypeId == "shimGeneric":
@@ -264,29 +277,27 @@ class Plugin(indigo.PluginBase):
             try:
                 topic_field = int(device.pluginProps['state_location_topic'])
             except:
-                self.logger.error(u"{}: error on state_location_topic, aborting".format(device.name))
-                return
-            
-            try:
-                state_value = topic_parts[topic_field]
-            except:
-                self.logger.error(u"{}: error obtaining state value, aborting".format(device.name))
-                return
+                self.logger.error(u"{}: error getting state_location_topic".format(device.name))
+            else:
+                try:
+                    state_value = topic_parts[topic_field]
+                except:
+                    self.logger.error(u"{}: error obtaining state value from topic field {}".format(device.name, topic_field))
            
         elif (device.pluginProps.get('state_location', None) == "payload") and (device.pluginProps.get('state_location_payload_type', None) == "raw"):
             state_value = payload
 
         elif (device.pluginProps.get('state_location', None) == "payload") and (device.pluginProps.get('state_location_payload_type', None) == "json"):
+        
+            if not state_data:
+                self.logger.error(u"{}: No state_data for json payload key".format(device.name))
+                return
+            
             try:
                 state_key = device.pluginProps['state_location_payload_key']
             except:
-                self.logger.error(u"{}: error on state_location_payload_key, aborting".format(device.name))
-                return
-            try:
-                state_data = json.loads(payload)
-            except:
-                self.logger.error(u"{}: JSON decode error for state_location = payload, aborting".format(device.name))
-                return
+                self.logger.error(u"{}: error getting state_location_payload_key".format(device.name))
+
             try:
                 state_value = self.recurseDict(state_key, state_data)
             except:
