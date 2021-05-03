@@ -220,33 +220,33 @@ class Plugin(indigo.PluginBase):
             try:
                 topic_field = int(device.pluginProps['uid_location_topic_field'])
             except:
-                self.logger.error(u"{}: error on uid_location_topic_field, aborting".format(device.name))
+                self.logger.error(u"{}: error getting uid_location_topic_field, aborting".format(device.name))
                 return
             try:
                 uid = topic_parts[topic_field]
             except:
-                self.logger.error(u"{}: error obtaining uid value, aborting".format(device.name))
+                self.logger.error(u"{}: error getting uid value from topic, aborting".format(device.name))
                 return
 
         elif device.pluginProps['uid_location'] == "payload":
             try:
-                json_payload = json.loads(message_data["payload"])
+                json_payload = json.loads(payload)
             except:
                 self.logger.error(u"{}: JSON decode error for uid_location = payload, aborting".format(device.name))
                 return
             try:
                 uid_location_payload_key = device.pluginProps['uid_location_payload_key']
             except:
-                self.logger.error(u"{}: error on uid_location_payload_key, aborting".format(device.name))
+                self.logger.error(u"{}: error getting uid_location_payload_key, aborting".format(device.name))
                 return
             try:
                 uid = json_payload[uid_location_payload_key]
             except:
-                self.logger.error(u"{}: error obtaining uid value, aborting".format(device.name))
+                self.logger.error(u"{}: error getting uid value from payload, aborting".format(device.name))
                 return
             
         else:
-            self.logger.error(u"{}: update can't determine address location".format(device.name))
+            self.logger.error(u"{}: update can't determine uid location".format(device.name))
             return
             
         if device.pluginProps['address'] != uid:
