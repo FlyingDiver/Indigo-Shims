@@ -32,47 +32,47 @@ class Plugin(indigo.PluginBase):
 
         pfmt = logging.Formatter('%(asctime)s.%(msecs)03d\t[%(levelname)8s] %(name)20s.%(funcName)-25s%(msg)s', datefmt='%Y-%m-%d %H:%M:%S')
         self.plugin_file_handler.setFormatter(pfmt)
-
         try:
             self.logLevel = int(self.pluginPrefs[u"logLevel"])
-        except:
+        except (Exception,):
             self.logLevel = logging.INFO
         self.indigo_log_handler.setLevel(self.logLevel)
-        self.logger.threaddebug(u"logLevel = " + str(self.logLevel))
+        self.logger.threaddebug(f"logLevel = {str(self.logLevel)}")
 
-    def startup(self):
-        indigo.server.log(u"Starting MQTT Shims")
         self.triggers = {}
         self.shimDevices = []
         self.messageTypesWanted = []
         self.messageQueue = Queue()
         self.mqttPlugin = indigo.server.getPlugin("com.flyingdiver.indigoplugin.mqtt")
-        indigo.server.subscribeToBroadcast(u"com.flyingdiver.indigoplugin.mqtt", u"com.flyingdiver.indigoplugin.mqtt-message_queued", "message_handler")
         if not self.mqttPlugin.isEnabled():
-            self.logger.warning(u"MQTT Connector plugin not enabled!")
+            self.logger.warning("MQTT Connector plugin not enabled!")
+
+    def startup(self):
+        self.logger.info("Starting MQTT Shims")
+        indigo.server.subscribeToBroadcast(u"com.flyingdiver.indigoplugin.mqtt", u"com.flyingdiver.indigoplugin.mqtt-message_queued", "message_handler")
 
     def message_handler(self, notification):
-        self.logger.debug(u"message_handler: MQTT message {} from {}".format(notification["message_type"], indigo.devices[int(notification["brokerID"])].name))
+        self.logger.debug(f"message_handler: MQTT message {notification['message_type']} from {indigo.devices[int(notification['brokerID'])].name}")
         self.messageQueue.put(notification)
 
     def shutdown(self):
-        indigo.server.log(u"Shutting down MQTT Shims")
+        self.logger.info("Shutting down MQTT Shims")
 
     def deviceStartComm(self, device):
-        self.logger.info(u"{}: Starting Device".format(device.name))
+        self.logger.info(f"{device.name}: Starting Device")
 
         instanceVers = int(device.pluginProps.get('devVersCount', 0))
         if instanceVers >= kCurDevVersCount:
-            self.logger.threaddebug(u"{}: Device Version is up to date".format(device.name))
+            self.logger.threaddebug(f"{device.name}: Device Version is up to date")
         elif instanceVers < kCurDevVersCount:
             newProps = device.pluginProps
             instanceVers = int(device.pluginProps.get('devVersCount', 0))
             newProps["devVersCount"] = kCurDevVersCount
             device.replacePluginPropsOnServer(newProps)
             device.stateListOrDisplayStateIdChanged()
-            self.logger.threaddebug(u"{}: Updated to version {}".format(device.name, kCurDevVersCount))
+            self.logger.threaddebug(f"{device.name}: Updated to version {kCurDevVersCount}")
         else:
-            self.logger.error(u"{}: Unknown device version: {}".format(device.name, instanceVers))
+            self.logger.error(f"{device.name}: Unknown device version: {instanceVers}")
 
         props = device.pluginProps
         if device.deviceTypeId == 'shimColor':
@@ -84,12 +84,13 @@ class Plugin(indigo.PluginBase):
         self.messageTypesWanted.append(device.pluginProps['message_type'])
 
     def deviceStopComm(self, device):
-        self.logger.info(u"{}: Stopping Device".format(device.name))
+        self.logger.info(f"{device.name}: Stopping Device")
         assert device.id in self.shimDevices
         self.shimDevices.remove(device.id)
         self.messageTypesWanted.remove(device.pluginProps['message_type'])
 
-    def didDeviceCommPropertyChange(self, oldDevice, newDevice):
+    @staticmethod
+    def didDeviceCommPropertyChange(oldDevice, newDevice):
         if oldDevice.pluginProps.get('SupportsBatteryLevel', None) != newDevice.pluginProps.get('SupportsBatteryLevel', None):
             return True
         if oldDevice.pluginProps.get('message_type', None) != newDevice.pluginProps.get('message_type', None):
@@ -97,13 +98,13 @@ class Plugin(indigo.PluginBase):
         return False
 
     def triggerStartProcessing(self, trigger):
-        self.logger.debug("{}: Adding Trigger".format(trigger.name))
+        self.logger.debug(f"{trigger.name}: Adding Trigger")
         assert trigger.pluginTypeId in ["deviceUpdated", "stateUpdated"]
         assert trigger.id not in self.triggers
         self.triggers[trigger.id] = trigger
 
     def triggerStopProcessing(self, trigger):
-        self.logger.debug("{}: Removing Trigger".format(trigger.name))
+        self.logger.debug(f"{trigger.name}: Removing Trigger")
         assert trigger.id in self.triggers
         del self.triggers[trigger.id]
 
@@ -123,23 +124,25 @@ class Plugin(indigo.PluginBase):
             if not notification:
                 return
             
-            if notification["message_type"] in self.messageTypesWanted:
-                props = { 'message_type': notification["message_type"] }
-                brokerID =  int(notification['brokerID'])
-                while True:
-                    message_data = self.mqttPlugin.executeAction("fetchQueuedMessage", deviceId=brokerID, props=props, waitUntilDone=True)
-                    if message_data == None:
-                        break
-                    for deviceID in self.shimDevices:
-                        device = indigo.devices[deviceID]
-                        if device.pluginProps['message_type'] == notification["message_type"]:
-                            self.logger.debug(u"{}: processMessages: '{}' {} -> {}".format(device.name, notification["message_type"], '/'.join(message_data["topic_parts"]), message_data["payload"]))
-                            self.update(device, message_data["topic_parts"],  message_data["payload"])
+            if notification["message_type"] not in self.messageTypesWanted:
+                return
 
+            props = {'message_type': notification["message_type"]}
+            brokerID = int(notification['brokerID'])
+            while True:
+                message_data = self.mqttPlugin.executeAction("fetchQueuedMessage", deviceId=brokerID, props=props, waitUntilDone=True)
+                if message_data is None:
+                    break
+                for deviceID in self.shimDevices:
+                    device = indigo.devices[deviceID]
+                    if device.pluginProps['message_type'] == notification["message_type"]:
+                        self.logger.debug(f"{device.name}: processMessages: '{notification['message_type']}' {'/'.join(message_data['topic_parts'])} -> {message_data['payload']}")
+                        self.update(device, message_data["topic_parts"],  message_data["payload"])
 
     # Convert a brightness value from the external device-specific value to Indigo scale
     
-    def convert_brightness_import(self, device, brightness):
+    @staticmethod
+    def convert_brightness_import(device, brightness):
         scale = device.pluginProps.get("brightness_scale", "100")
         if scale == '255':
             brightness = int(round(100.0 * (brightness / 255.0)))
@@ -147,7 +150,8 @@ class Plugin(indigo.PluginBase):
         
     # Convert a brightness value from Indigo scale to the external device-specific value
 
-    def convert_brightness_export(self, device, brightness):
+    @staticmethod
+    def convert_brightness_export(device, brightness):
         scale = device.pluginProps.get("brightness_scale", "100")
         if scale == '255':
             brightness = int(round(255.0 * (brightness / 100.0)))
@@ -155,7 +159,8 @@ class Plugin(indigo.PluginBase):
         
     # Convert a color temperature value from the external device-specific value to Indigo scale
     
-    def convert_color_temp_import(self, device, color_temp):
+    @staticmethod
+    def convert_color_temp_import(device, color_temp):
         scale = device.pluginProps.get("color_temp_scale", "Kelvin")
         if scale == "Mirek":
             color_temp = int(round(1000000.0/color_temp))
@@ -163,7 +168,8 @@ class Plugin(indigo.PluginBase):
         
     # Convert a color temperature value from Indigo scale to the external device-specific value
 
-    def convert_color_temp_export(self, device, color_temp):
+    @staticmethod
+    def convert_color_temp_export(device, color_temp):
         scale = device.pluginProps.get("color_temp_scale", "Kelvin")
         if scale == "Mirek":
             color_temp = int(round(1000000.0/color_temp))
@@ -183,17 +189,19 @@ class Plugin(indigo.PluginBase):
                 converter = Converter(GamutB)
             elif space == "HueC":
                 converter = Converter(GamutC)
-                
+            else:
+                converter = Converter(GamutA)       # default?
+
             redLevel, greenLevel, blueLevel = converter.xy_to_rgb(color_dict['x'], color_dict['y'])
-            self.logger.debug(u"{}: xy_to_rgb output: {} {} {}".format(device.name, redLevel, greenLevel, blueLevel))
+            self.logger.debug(f"{device.name}: xy_to_rgb output: {redLevel} {greenLevel} {blueLevel}")
             output = {'redLevel': redLevel / 2.55, 'greenLevel': greenLevel / 2.55, 'blueLevel': blueLevel / 2.55}
-            self.logger.debug(u"{}: convert_color_space_import output: {}".format(device.name, output))
+            self.logger.debug(f"{device.name}: convert_color_space_import output: {output}")
             return output
                 
     # Convert a color space dict from Indigo scale to the external device-specific value
 
     def convert_color_space_export(self, device, color_dict):
-        self.logger.debug(u"{}: convert_color_space_export input: {}".format(device.name, color_dict))
+        self.logger.debug(f"{device.name}: convert_color_space_export input: {color_dict}")
         space = device.pluginProps.get("color_space", "Indigo")
         if space == "Indigo":
             return color_dict
@@ -204,96 +212,102 @@ class Plugin(indigo.PluginBase):
                 converter = Converter(GamutB)
             elif space == "HueC":
                 converter = Converter(GamutC)
-        
+            else:
+                converter = Converter(GamutA)       # default?
+
             x, y = converter.rgb_to_xy(2.55 * color_dict['redLevel'], 2.55 * color_dict['greenLevel'], 2.55 * color_dict['blueLevel'])
-            self.logger.debug(u"{}: rgb_to_xy output: {} {}".format(device.name, x, y))
+            self.logger.debug(f"{device.name}: rgb_to_xy output: {x} {y}")
             output = {'x': x, 'y': y}
-            self.logger.debug(u"{}: convert_color_space_export output: {}".format(device.name, output))
+            self.logger.debug(f"{device.name}: convert_color_space_export output: {output}")
             return output        
-        
-    
+
     def update(self, device, topic_parts, payload):    
-       
+        state_value = None
+        state_key = None
+        states_dict = None
+
         # first determine the UID (address) for this message
         
         if device.pluginProps.get('uid_location', None) == "topic":
             try:
                 topic_field = int(device.pluginProps['uid_location_topic_field'])
-            except:
-                self.logger.error(u"{}: error getting uid_location_topic_field, aborting".format(device.name))
+            except (Exception,):
+                self.logger.error(f"{device.name}: error getting uid_location_topic_field, aborting")
                 return
             try:
                 uid = topic_parts[topic_field]
-            except:
-                self.logger.error(u"{}: error getting uid value from topic, aborting".format(device.name))
+            except (Exception,):
+                self.logger.error(f"{device.name}: error getting uid value from topic, aborting")
                 return
 
         elif device.pluginProps['uid_location'] == "payload":
             try:
                 json_payload = json.loads(payload)
-            except:
-                self.logger.error(u"{}: JSON decode error for uid_location = payload, aborting".format(device.name))
+            except (Exception,):
+                self.logger.error(f"{device.name}: JSON decode error for uid_location = payload, aborting")
                 return
             try:
                 uid_location_payload_key = device.pluginProps['uid_location_payload_key']
-            except:
-                self.logger.error(u"{}: error getting uid_location_payload_key, aborting".format(device.name))
+            except (Exception,):
+                self.logger.error(f"{device.name}: error getting uid_location_payload_key, aborting")
                 return
             try:
                 uid = json_payload[uid_location_payload_key]
-            except:
-                self.logger.error(u"{}: error getting uid value from payload, aborting".format(device.name))
+            except (Exception,):
+                self.logger.error(f"{device.name}: error getting uid value from payload, aborting")
                 return
             
         else:
-            self.logger.error(u"{}: update can't determine uid location".format(device.name))
+            self.logger.error(f"{device.name}: update can't determine uid location")
             return
             
         if device.pluginProps['address'] != uid:
-            self.logger.debug(u"{}: update uid mismatch: {} != {}".format(device.name, device.pluginProps['address'], uid))
+            self.logger.debug(f"{device.name}: update uid mismatch: {device.pluginProps['address']} != {uid}")
             return
             
         # get the JSON payload, if there is one
 
         try:
             state_data = json.loads(payload)
-        except:
+        except (Exception,):
             state_data = None
                     
         # Determine state (value) location, if any.  Generic Shims don't have a value.
         
         if device.deviceTypeId == "shimGeneric":
-            pass
+            state_value = None
 
         elif device.pluginProps.get('state_location', None) == "topic":
             try:
                 topic_field = int(device.pluginProps['state_location_topic'])
-            except:
-                self.logger.error(u"{}: error getting state_location_topic".format(device.name))
+            except (Exception,):
+                self.logger.error(f"{device.name}: error getting state_location_topic")
             else:
                 try:
                     state_value = topic_parts[topic_field]
-                except:
-                    self.logger.error(u"{}: error obtaining state value from topic field {}".format(device.name, topic_field))
-           
+                except (Exception,):
+                    self.logger.error(f"{device.name}: error obtaining state value from topic field {topic_field}")
+                    state_value = None
+
         elif (device.pluginProps.get('state_location', None) == "payload") and (device.pluginProps.get('state_location_payload_type', None) == "raw"):
             state_value = payload
 
         elif (device.pluginProps.get('state_location', None) == "payload") and (device.pluginProps.get('state_location_payload_type', None) == "json"):
         
             if not state_data:
-                self.logger.error(u"{}: No JSON payload data for state_value".format(device.name))
+                self.logger.error(f"{device.name}: No JSON payload data for state_value")
                 return
             
             try:
                 state_key = device.pluginProps['state_location_payload_key']
-            except:
-                self.logger.error(u"{}: error getting state_location_payload_key".format(device.name))
+            except (Exception,):
+                self.logger.error(f"{device.name}: error getting state_location_payload_key")
+                return
 
             try:
                 state_value = self.recurseDict(state_key, state_data)
-            except:
-                self.logger.error(u"{}: state_key {} not found in state_data {} aborting".format(device.name, state_key, state_data))
+            except (Exception,):
+                self.logger.error(f"{device.name}: state_key {state_key} not found in state_data {state_data} aborting")
                 return
             
         else:
@@ -309,64 +323,64 @@ class Plugin(indigo.PluginBase):
             energy = self.recurseDict(device.pluginProps['energy_payload_key'], state_data)
             device.updateStateOnServer('accumEnergyTotal', energy, uiValue='{} kWh'.format(energy))
 
-        if bool(device.pluginProps.get('SupportsEnergyMeterCurPower', False)) and  ("curEnergyLevel" in device.states):
+        if bool(device.pluginProps.get('SupportsEnergyMeterCurPower', False)) and ("curEnergyLevel" in device.states):
             power = self.recurseDict(device.pluginProps['power_payload_key'], state_data)
             device.updateStateOnServer('curEnergyLevel', power, uiValue='{} W'.format(power))
 
         # do multi-states processing
         
-        self.logger.debug(u"{}: Raw payload = {}".format(device.name, payload))
+        self.logger.debug(f"{device.name}: Raw payload = {payload}")
 
         states_key = device.pluginProps.get('state_dict_payload_key', None)
-        self.logger.debug(u"{}: states_key= {}".format(device.name, states_key))
+        self.logger.debug(f"{device.name}: states_key= {states_key}")
         if states_key:
             try:
                 data = json.loads(payload)
-            except:
-                self.logger.debug(u"{}: JSON decode error for payload, aborting".format(device.name))
+            except (Exception,):
+                self.logger.debug(f"{device.name}: JSON decode error for payload, aborting")
                 return
-            self.logger.debug(u"{}: Decoded payload = {}".format(device.name, data))
+            self.logger.debug(f"{device.name}: Decoded payload = {data}")
             states_dict = self.recurseDict(states_key, data)
-            self.logger.debug(u"{}: states_dict = {}".format(device.name, states_dict))
+            self.logger.debug(f"{device.name}: states_dict = {states_dict}")
             if type(states_dict) != dict:
-                self.logger.error(u"{}: Device config error, bad Multi-States Key value: {}".format(device.name, states_key))
+                self.logger.error(f"{device.name}: Device config error, bad Multi-States Key value: {states_key}")
                 states_dict = None
                 
             if not len(states_dict) > 0:
-                self.logger.warning(u"{}: Possible device config error, Multi-States Key {} returns empty dict.".format(device.name, states_key))
+                self.logger.warning(f"{device.name}: Possible device config error, Multi-States Key {states_key} returns empty dict.")
                 states_dict = None
                 
             if states_dict:
                 states_list = []         
-                old_states =  device.pluginProps.get("states_list", indigo.List())
+                old_states = device.pluginProps.get("states_list", indigo.List())
                 new_states = indigo.List()                
                 for key in states_dict:
-                    if states_dict[key] != None:
+                    if states_dict[key] is not None:
                         safe_key = safeKey(key)
                         new_states.append(safe_key)
-                        self.logger.debug(u"{}: adding to states_list: {}, {}, {}".format(device.name, safe_key, states_dict[key], type(states_dict[key])))
+                        self.logger.debug(f"{device.name}: adding to states_list: {safe_key}, {states_dict[key]}, {type(states_dict[key])}")
                         if type(states_dict[key]) in (int, bool):
                             states_list.append({'key': safe_key, 'value': states_dict[key]})
                         if type(states_dict[key]) in (str, unicode):
                             states_list.append({'key': safe_key, 'value': states_dict[key]})
-#                            states_list.append({'key': safe_key, 'value': str(states_dict[key])})
                         elif isinstance(type(states_dict[key]), float):
                             states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
                         else:
                             states_list.append({'key': safe_key, 'value': json.dumps(states_dict[key])})
 
                 if set(old_states) != set(new_states):
-                    self.logger.threaddebug(u"{}: update, new_states: {}".format(device.name, new_states))
-                    self.logger.threaddebug(u"{}: update, states_list: {}".format(device.name, states_list))
+                    self.logger.threaddebug(f"{device.name}: update, new_states: {new_states}")
+                    self.logger.threaddebug(f"{device.name}: update, states_list: {states_list}")
                     newProps = device.pluginProps
                     newProps["states_list"] = new_states
                     device.replacePluginPropsOnServer(newProps)
                     device.stateListOrDisplayStateIdChanged()    
                 device.updateStatesOnServer(states_list)
-
             
         # Device type specific processing.  No entry for ShimGeneric, it's all handled above
-        
+        if not state_value:
+            return
+
         if device.deviceTypeId in ["shimRelay", "shimOnOffSensor"]:
             
             if isinstance(state_value, bool):
@@ -410,28 +424,26 @@ class Plugin(indigo.PluginBase):
                 else:
                     device.updateStateImageOnServer(indigo.kStateImageSel.DimmerOff)
 
-                
         if device.deviceTypeId in ["shimDimmer", "shimColor"]:
             states_list = []
 
             value_key = device.pluginProps['value_location_payload_key']
             brightness = self.recurseDict(value_key, state_data)
-            self.logger.debug(u"{}: shimDimmer, state_key = {}, value_key = {}, data = {}, state = {}, brightness = {}".format(device.name, state_key, value_key, state_data, state_value, brightness ))
+            self.logger.debug(f"{device.name}: shimDimmer, state_key = {state_key}, value_key = {value_key}, data = {state_data}, state = {state_value}, brightness = {brightness}")
 
             if state_value.lower() in ['off', 'false', '0']:
                 isOn = False
             else:
                 isOn = True
-            self.logger.debug(u"{}: Setting onOffState to {}".format(device.name, isOn))
+            self.logger.debug(f"{device.name}: Setting onOffState to {isOn}")
             states_list.append({'key': 'onOffState', 'value': isOn})
 
-            if brightness != None and isOn:
+            if brightness is not None and isOn:
                 brightness = self.convert_brightness_import(device, brightness)
-                self.logger.debug(u"{}: Updating brightnessLevel to {}".format(device.name, brightness))
+                self.logger.debug(f"{device.name}: Updating brightnessLevel to {brightness}")
                 states_list.append({'key': 'brightnessLevel', 'value': brightness})                
             device.updateStatesOnServer(states_list)
 
-            
         if device.deviceTypeId == "shimColor":
             states_list = []
             
@@ -440,43 +452,42 @@ class Plugin(indigo.PluginBase):
             if color_values:
                 color_values = self.convert_color_space_import(device, color_values)
                 
-                self.logger.debug(u"{}: Updating color values to {}".format(device.name, color_values))
+                self.logger.debug(f"{device.name}: Updating color values to {color_values}")
                 states_list.append({'key':'redLevel',   'value':color_values['redLevel']})
                 states_list.append({'key':'greenLevel', 'value':color_values['greenLevel']})
                 states_list.append({'key':'blueLevel',  'value':color_values['blueLevel']})
-                self.logger.debug(u"{}: Updating states: {}".format(device.name, states_list))
+                self.logger.debug(f"{device.name}: Updating states: {states_list}")
             
             color_temp_key = device.pluginProps['color_temp_payload_key']
             color_temp = self.recurseDict(color_temp_key, state_data)            
             
             if color_temp:
                 color_temp = self.convert_color_temp_import(device, color_temp)
-                self.logger.debug(u"{}: Updating color temperature to {}".format(device.name, color_temp))
+                self.logger.debug(f"{device.name}: Updating color temperature to {color_temp}")
                 states_list.append({'key': 'whiteTemperature', 'value': color_temp})
             device.updateStatesOnServer(states_list)
-
             
         if device.deviceTypeId == "shimValueSensor":
             try:
                 value = float(state_value)
             except (TypeError, ValueError):
-                self.logger.error(u"{}: update() is unable to convert '{}' to float".format(device.name, state_value))
+                self.logger.error(f"{device.name}: update() is unable to convert '{state_value}' to float")
                 return
                            
             function = device.pluginProps.get("adjustmentFunction", None)            
-            self.logger.threaddebug(u"{}: update adjustmentFunction: '{}'".format(device.name, function))
+            self.logger.threaddebug(f"{device.name}: update adjustmentFunction: '{function}'")
             if function:
                 prohibited = ['indigo', 'requests', 'pyserial', 'oauthlib', 'os', 'logging', 'json', 'yaml', 'pystache', 'Queue']
                 if any(x in function for x in prohibited):
-                    self.logger.warning(u"{}: Invalid method in adjustmentFunction: '{}'".format(device.name, function))
+                    self.logger.warning(f"{device.name}: Invalid method in adjustmentFunction: '{function}'")
                 else:
                     x = value
                     value = eval(function)
-            self.logger.debug(u"{}: Updating state to {}".format(device.name, value))
+            self.logger.debug(f"{device.name}: Updating state to {value}")
     
             if device.pluginProps["shimSensorSubtype"] == "Generic":
                 precision = device.pluginProps.get("shimSensorPrecision", "2")
-                device.updateStateImageOnServer(indigo.kStateImageSel.None)
+                device.updateStateImageOnServer(indigo.kStateImageSel.NoImage)
                 device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f}'.format(value, prec=precision))
 
             elif device.pluginProps["shimSensorSubtype"] == "Temperature-F":
@@ -496,12 +507,12 @@ class Plugin(indigo.PluginBase):
 
             elif device.pluginProps["shimSensorSubtype"] == "Pressure-inHg":
                 precision = device.pluginProps.get("shimSensorPrecision", "2")
-                device.updateStateImageOnServer(indigo.kStateImageSel.None)
+                device.updateStateImageOnServer(indigo.kStateImageSel.NoImage)
                 device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} inHg'.format(value, prec=precision))
 
             elif device.pluginProps["shimSensorSubtype"] == "Pressure-mb":
                 precision = device.pluginProps.get("shimSensorPrecision", "2")
-                device.updateStateImageOnServer(indigo.kStateImageSel.None)
+                device.updateStateImageOnServer(indigo.kStateImageSel.NoImage)
                 device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} mb'.format(value, prec=precision))
 
             elif device.pluginProps["shimSensorSubtype"] == "Power-W":
@@ -531,7 +542,7 @@ class Plugin(indigo.PluginBase):
 
             elif device.pluginProps["shimSensorSubtype"] == "ppm":
                 precision = device.pluginProps.get("shimSensorPrecision", "0")
-                device.updateStateImageOnServer(indigo.kStateImageSel.None)
+                device.updateStateImageOnServer(indigo.kStateImageSel.NoImage)
                 device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=u'{:.{prec}f} ppm'.format(value, prec=precision))
 
             else:
@@ -560,28 +571,28 @@ class Plugin(indigo.PluginBase):
                         new_data = data_dict[int(key_string[1:-1])]
                     else:
                         new_data = data_dict.get(key_string, None)
-                except:
+                except (Exception,):
                     return None
                 else:
                     return new_data
             
             else:
                 split = key_string.split('.', 1)
-                self.logger.threaddebug(u"recurseDict split[0] = {}, split[1] = {}".format(split[0], split[1]))
+                self.logger.threaddebug(f"recurseDict split[0] = {split[0]}, split[1] = {split[1]}")
                 try:
                     if split[0][0] == '[':
                         new_data = data_dict[int(split[0][1:-1])]
                     else:
                         new_data = data_dict[split[0]]
-                except:
+                except (Exception,):
                     return None
                 else:
                     return self.recurseDict(split[1], new_data)
         except Exception as e:
-            self.logger.error(u"recurseDict error: {}".format(e))
-              
+            self.logger.error(f"recurseDict error: {e}")
 
-    def getStateList(self, filter, valuesDict, typeId, deviceId):
+    @staticmethod
+    def getStateList(filter, valuesDict, typeId, deviceId):
         returnList = list()
         if 'states_list' in valuesDict:
             for topic in valuesDict['states_list']:
@@ -590,27 +601,22 @@ class Plugin(indigo.PluginBase):
 
     def getDeviceStateList(self, device):
         stateList = indigo.PluginBase.getDeviceStateList(self, device)
-        add_states =  device.pluginProps.get("states_list", indigo.List())
+        add_states = device.pluginProps.get("states_list", indigo.List())
         for key in add_states:
             dynamic_state = self.getDeviceStateDictForStringType(unicode(key), unicode(key), unicode(key))
             stateList.append(dynamic_state)
-        self.logger.threaddebug(u"{}: getDeviceStateList returning: {}".format(device.name, stateList))
+        self.logger.threaddebug(f"{device.name}: getDeviceStateList returning: {stateList}")
         return stateList 
-    
 
-    def getBrokerDevices(self, filter="", valuesDict=None, typeId="", targetId=0):
-
+    @staticmethod
+    def getBrokerDevices(filter="", valuesDict=None, typeId="", targetId=0):
         retList = []
         devicePlugin = valuesDict.get("devicePlugin", None)
         for dev in indigo.devices.iter():
-            if dev.protocol == indigo.kProtocol.Plugin and \
-                dev.pluginId == "com.flyingdiver.indigoplugin.mqtt" and \
-                dev.deviceTypeId != 'aggregator' :
+            if dev.protocol == indigo.kProtocol.Plugin and dev.pluginId == "com.flyingdiver.indigoplugin.mqtt" and dev.deviceTypeId != 'aggregator':
                 retList.append((dev.id, dev.name))
-
         retList.sort(key=lambda tup: tup[1])
         return retList
-
 
     ########################################
     # Relay / Dimmer Action callback
@@ -619,43 +625,43 @@ class Plugin(indigo.PluginBase):
     def actionControlDevice(self, action, device):
 
         if action.deviceAction == indigo.kDeviceAction.TurnOn:
-            action_template =  device.pluginProps.get("action_template", None)
+            action_template = device.pluginProps.get("action_template", None)
             if not action_template:
-                self.logger.error(u"{}: actionControlDevice: no action template".format(device.name))
+                self.logger.error(f"{device.name}: actionControlDevice: no action template")
                 return
                 
-            payload =  device.pluginProps.get("on_action_payload", "on")
+            payload = device.pluginProps.get("on_action_payload", "on")
             topic = pystache.render(action_template, {'uniqueID': device.address})
             self.publish_topic(device, topic, payload)
 
         elif action.deviceAction == indigo.kDeviceAction.TurnOff:
-            action_template =  device.pluginProps.get("action_template", None)
+            action_template = device.pluginProps.get("action_template", None)
             if not action_template:
-                self.logger.error(u"{}: actionControlDevice: no action template".format(device.name))
+                self.logger.error(f"{device.name}: actionControlDevice: no action template")
                 return
 
-            payload =  device.pluginProps.get("off_action_payload", "off")
+            payload = device.pluginProps.get("off_action_payload", "off")
             topic = pystache.render(action_template, {'uniqueID': device.address})
             self.publish_topic(device, topic, payload)
 
         elif action.deviceAction == indigo.kDeviceAction.Toggle:
-            action_template =  device.pluginProps.get("action_template", None)
+            action_template = device.pluginProps.get("action_template", None)
             if not action_template:
-                self.logger.error(u"{}: actionControlDevice: no action template".format(device.name))
+                self.logger.error(f"{device.name}: actionControlDevice: no action template")
                 return
 
-            payload =  device.pluginProps.get("toggle_action_payload", "toggle")
+            payload = device.pluginProps.get("toggle_action_payload", "toggle")
             topic = pystache.render(action_template, {'uniqueID': device.address})
             self.publish_topic(device, topic, payload)
 
         elif action.deviceAction == indigo.kDeviceAction.SetBrightness:
-            action_template =  device.pluginProps.get("dimmer_action_template", None)
+            action_template = device.pluginProps.get("dimmer_action_template", None)
             if not action_template:
-                self.logger.error(u"{}: actionControlDevice: no action template".format(device.name))
+                self.logger.error(f"{device.name}: actionControlDevice: no action template")
                 return
-            payload_template =  device.pluginProps.get("dimmer_action_payload", None)
+            payload_template = device.pluginProps.get("dimmer_action_payload", None)
             if not payload_template:
-                self.logger.error(u"{}: actionControlDevice: no payload template".format(device.name))
+                self.logger.error(f"{device.name}: actionControlDevice: no payload template")
                 return
                 
             payload_data = {'brightness': self.convert_brightness_export(device, action.actionValue)}
@@ -669,13 +675,13 @@ class Plugin(indigo.PluginBase):
             if newBrightness > 100:
                 newBrightness = 100
 
-            action_template =  device.pluginProps.get("dimmer_action_template", None)
+            action_template = device.pluginProps.get("dimmer_action_template", None)
             if not action_template:
-                self.logger.error(u"{}: actionControlDevice: no action template".format(device.name))
+                self.logger.error(f"{device.name}: actionControlDevice: no action template")
                 return
-            payload_template =  device.pluginProps.get("dimmer_action_payload", None)
+            payload_template = device.pluginProps.get("dimmer_action_payload", None)
             if not payload_template:
-                self.logger.error(u"{}: actionControlDevice: no payload template".format(device.name))
+                self.logger.error(f"{device.name}: actionControlDevice: no payload template")
                 return
                 
             payload_data = {'brightness': self.convert_brightness_export(device, newBrightness)}
@@ -688,13 +694,13 @@ class Plugin(indigo.PluginBase):
             if newBrightness < 0:
                 newBrightness = 0
 
-            action_template =  device.pluginProps.get("dimmer_action_template", None)
+            action_template = device.pluginProps.get("dimmer_action_template", None)
             if not action_template:
-                self.logger.error(u"{}: actionControlDevice: no action template".format(device.name))
+                self.logger.error(f"{device.name}: actionControlDevice: no action template")
                 return
-            payload_template =  device.pluginProps.get("dimmer_action_payload", None)
+            payload_template = device.pluginProps.get("dimmer_action_payload", None)
             if not payload_template:
-                self.logger.error(u"{}: actionControlDevice: no payload template".format(device.name))
+                self.logger.error(f"{device.name}: actionControlDevice: no payload template")
                 return
                 
             payload_data = {'brightness': self.convert_brightness_export(device, newBrightness)}
@@ -705,31 +711,29 @@ class Plugin(indigo.PluginBase):
         elif action.deviceAction == indigo.kDeviceAction.SetColorLevels:
         
             actionColorVals = action.actionValue
-            payload_data = {}
-
-            payload_data["brightness"] = self.convert_brightness_export(device, device.brightness)
+            payload_data = {"brightness": self.convert_brightness_export(device, device.brightness)}
 
             if device.supportsWhiteTemperature and 'whiteTemperature' in action.actionValue:
 
-                action_template =  device.pluginProps.get("set_temp_topic", None)
+                action_template = device.pluginProps.get("set_temp_topic", None)
                 if not action_template:
-                    self.logger.error(u"{}: actionControlDevice: no topic template for setting color temperature".format(device.name))
+                    self.logger.error(f"{device.name}: actionControlDevice: no topic template for setting color temperature")
                     return
-                payload_template =  device.pluginProps.get("set_temp_template", None)
+                payload_template = device.pluginProps.get("set_temp_template", None)
                 if not payload_template:
-                    self.logger.error(u"{}: actionControlDevice: no payload template for setting color temperature".format(device.name))
+                    self.logger.error(f"{device.name}: actionControlDevice: no payload template for setting color temperature")
                     return
                 payload_data["color_temp"] = self.convert_color_temp_export(device, float(action.actionValue['whiteTemperature']))
            
             elif device.supportsRGB and 'redLevel' in action.actionValue:
 
-                action_template =  device.pluginProps.get("set_rgb_topic", None)
+                action_template = device.pluginProps.get("set_rgb_topic", None)
                 if not action_template:
-                    self.logger.error(u"{}: actionControlDevice: no topic template for setting RGB color".format(device.name))
+                    self.logger.error(f"{device.name}: actionControlDevice: no topic template for setting RGB color")
                     return
-                payload_template =  device.pluginProps.get("set_rgb_template", None)
+                payload_template = device.pluginProps.get("set_rgb_template", None)
                 if not payload_template:
-                    self.logger.error(u"{}: actionControlDevice: no payload template for setting RGB color".format(device.name))
+                    self.logger.error(f"{device.name}: actionControlDevice: no payload template for setting RGB color")
                     return
 
                 new_colors = self.convert_color_space_export(device, action.actionValue)
@@ -737,7 +741,7 @@ class Plugin(indigo.PluginBase):
                     payload_data[key] = new_colors[key]
 
             else:
-                self.logger.debug(u"{}: SetColorLevels, unsupported color change".format(device.name))
+                self.logger.debug(f"{device.name}: SetColorLevels, unsupported color change")
                 return
  
             # Render and send
@@ -746,7 +750,7 @@ class Plugin(indigo.PluginBase):
             self.publish_topic(device, topic, payload)
 
         else:
-            self.logger.error(u"{}: actionControlDevice: Unsupported action requested: {}".format(device.name, action.deviceAction))
+            self.logger.error(f"{device.name}: actionControlDevice: Unsupported action requested: {action.deviceAction}")
 
     ########################################
     # General Action callback
@@ -754,22 +758,22 @@ class Plugin(indigo.PluginBase):
 
     def actionControlUniversal(self, action, device):
 
-        action_template =  device.pluginProps.get("action_template", None)
+        action_template = device.pluginProps.get("action_template", None)
         if not action_template:
-            self.logger.error(u"{}: actionControlDevice: no action template".format(device.name))
+            self.logger.error(f"{device.name}: actionControlDevice: no action template")
             return
         topic = pystache.render(action_template, {'uniqueID': device.address})
 
         if action.deviceAction == indigo.kUniversalAction.RequestStatus or action.deviceAction == indigo.kUniversalAction.EnergyUpdate:
-            self.logger.debug(u"{}: actionControlUniversal: RequestStatus".format(device.name))
+            self.logger.debug(f"{device.name}: actionControlUniversal: RequestStatus")
             if not bool(device.pluginProps.get('SupportsStatusRequest', False)):
-                self.logger.warning(u"{}: actionControlUniversal: device does not support status requests".format(device.name))                
+                self.logger.warning(f"{device.name}: actionControlUniversal: device does not support status requests")
             else:
-                action_template =  device.pluginProps.get("status_action_template", None)
+                action_template = device.pluginProps.get("status_action_template", None)
                 if not action_template:
-                    self.logger.error(u"{}: actionControlUniversal: no action template".format(device.name))
+                    self.logger.error(f"{device.name}: actionControlUniversal: no action template")
                     return
-                payload =  device.pluginProps.get("status_action_payload", "")
+                payload = device.pluginProps.get("status_action_payload", "")
                 topic = pystache.render(action_template, {'uniqueID': device.address})
                 self.publish_topic(device, topic, payload)
                 self.logger.info(u"Sent '{}' Status Request".format(device.name))
@@ -780,7 +784,6 @@ class Plugin(indigo.PluginBase):
  
         else:
             self.logger.error(u"{}: actionControlUniversal: Unsupported action requested: {}".format(device.name, action.deviceAction))
-
 
     def publish_topic(self, device, topic, payload):
     
@@ -807,7 +810,7 @@ class Plugin(indigo.PluginBase):
         if not userCancelled:
             try:
                 self.logLevel = int(valuesDict[u"logLevel"])
-            except:
+            except (Exception,):
                 self.logLevel = logging.INFO
             self.indigo_log_handler.setLevel(self.logLevel)
 
@@ -839,7 +842,7 @@ class Plugin(indigo.PluginBase):
                 continue
             if value in ['', None]:
                 continue
-            if value == False:
+            if not value:
                 continue
                 
             props[key] = device.pluginProps[key]
@@ -858,11 +861,10 @@ class Plugin(indigo.PluginBase):
                             'queueMessage': True
                         }
                         break
-            except:
+            except (Exception,):
                 pass
                         
-        self.logger.info("\n{}".format(yaml.safe_dump(template, allow_unicode=True, width=120, indent=4, default_flow_style=False).decode('utf-8')))
-
+        self.logger.info(f"\n{yaml.safe_dump(template, allow_unicode=True, width=120, indent=4, default_flow_style=False).decode('utf-8')}")
         return True
 
     def pickDeviceTemplate(self, filter=None, valuesDict=None, typeId=0, targetId=0):
@@ -877,36 +879,34 @@ class Plugin(indigo.PluginBase):
         
             for root, d, f in os.walk(template_dir):
                 for file in f:
-                    self.logger.debug("Found File {} in {}".format(file, root))
+                    self.logger.debug(f"Found File {file} in {root}")
                     (base, ext) = os.path.splitext(file)
                     if ext == '.yaml':
                         templates[base] = os.path.join(root, file)
-                for dir in d:
-                    self.logger.debug("Found directory {} in {}".format(dir, root))
-                    # need to look in here too 
+                for x in d:
+                    self.logger.debug(f"Found directory {x} in {root}")  # need to look in here too
                     
         retList = []
         for key in templates:
             retList.append((templates[key], key))
         retList.sort(key=lambda tup: tup[1])
-        self.logger.debug("{}".format(retList))
+        self.logger.debug(f"{retList}")
         return retList
 
-    
     def createDeviceFromTemplate(self, valuesDict, typeId):
-        self.logger.debug("createDeviceFromTemplate, typeId = {}, valuesDict = {}".format(typeId, valuesDict))
+        self.logger.debug(f"createDeviceFromTemplate, typeId = {typeId}, valuesDict = {valuesDict}")
         stream = file(valuesDict['deviceTemplatePath'], 'r')
         template = yaml.safe_load(stream)
         template['props']['brokerID'] = valuesDict['brokerID']        
         template['props']['message_type'] = template['message_type']        
         try:
-            indigo.device.create(indigo.kProtocol.Plugin, 
-                name="{} {}".format(template['type'], valuesDict['address']), 
-                address=valuesDict['address'], 
-                deviceTypeId=template['type'], 
-                props=template['props'])
-        except Exception, e:
-            self.logger.error("Error calling indigo.device.create(): {}".format(e.message))
+            indigo.device.create(indigo.kProtocol.Plugin,
+                                 name=f"{template['type']} {valuesDict['address']}",
+                                 address=valuesDict['address'],
+                                 deviceTypeId=template['type'],
+                                 props=template['props'])
+        except Exception as e:
+            self.logger.error(f"Error calling indigo.device.create(): {e.message}")
 
         # create a trigger for this device if needed
         
@@ -920,7 +920,7 @@ class Plugin(indigo.PluginBase):
                             # found a match, bail out
                             self.logger.debug("Skipping trigger creation, existing trigger for message type '{}' found: {}".format(template['message_type'], trigger.name))
                             return True
-                except:
+                except (Exception,):
                     pass
 
             try:
@@ -934,8 +934,5 @@ class Plugin(indigo.PluginBase):
                         "queueMessage": template['trigger']['queueMessage'], 
                         "match_list":   json.loads(template['trigger']['match_list']) 
                     })
-            except Exception, e:
+            except Exception as e:
                 self.logger.error("Error calling indigo.pluginEvent.create(): {}".format(e.message))
-    
-        return True
-        
