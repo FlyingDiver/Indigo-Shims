@@ -5,8 +5,6 @@ Defines a class responsible for rendering logic.
 
 """
 
-import re
-
 from pystache.common import is_string
 from pystache.parser import parse
 
@@ -42,8 +40,14 @@ class RenderEngine(object):
     #   and set as an attribute a single RenderResolver instance
     #   that encapsulates the customizable aspects of converting
     #   strings and resolving partials and names from context.
-    def __init__(self, literal=None, escape=None, resolve_context=None,
-                 resolve_partial=None, to_str=None):
+    def __init__(
+        self,
+        literal=None,
+        escape=None,
+        resolve_context=None,
+        resolve_partial=None,
+        to_str=None,
+    ):
         """
         Arguments:
 
@@ -160,7 +164,7 @@ class RenderEngine(object):
         if not is_string(val):
             # In case the template is an integer, for example.
             val = self.to_str(val)
-        if type(val) is not unicode:
+        if type(val) is not str:
             val = self.literal(val)
         return self.render(val, context, delimiters)
 

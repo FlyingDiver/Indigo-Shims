@@ -911,8 +911,9 @@ class Plugin(indigo.PluginBase):
 
     def createDeviceFromTemplate(self, valuesDict, typeId):
         self.logger.debug(f"createDeviceFromTemplate, typeId = {typeId}, valuesDict = {valuesDict}")
-        stream = file(valuesDict['deviceTemplatePath'], 'r')
-        template = yaml.safe_load(stream)
+        with open(valuesDict['deviceTemplatePath'], 'r') as stream:
+            template = yaml.safe_load(stream)
+
         template['props']['brokerID'] = valuesDict['brokerID']
         template['props']['message_type'] = template['message_type']
         try:
@@ -954,3 +955,6 @@ class Plugin(indigo.PluginBase):
                     })
             except Exception as e:
                 self.logger.error("Error calling indigo.pluginEvent.create(): {}".format(e.message))
+
+        return True
+    
