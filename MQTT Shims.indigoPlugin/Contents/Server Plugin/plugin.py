@@ -263,7 +263,7 @@ class Plugin(indigo.PluginBase):
             self.logger.error(f"{device.name}: update can't determine uid location")
             return
 
-        if device.pluginProps['address'] != uid:
+        if device.pluginProps['address'].strip() != uid.strip():
             self.logger.debug(f"{device.name}: update uid mismatch: {device.pluginProps['address']} != {uid}")
             return
 
