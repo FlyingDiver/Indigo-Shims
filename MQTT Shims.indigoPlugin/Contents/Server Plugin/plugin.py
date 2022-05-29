@@ -180,7 +180,7 @@ class Plugin(indigo.PluginBase):
     # Convert a color space dict from the external device-specific value to Indigo space
 
     def convert_color_space_import(self, device, color_dict):
-        self.logger.debug(u"{}: convert_color_space_import input: {}".format(device.name, color_dict))
+        self.logger.debug(f"{device.name}: convert_color_space_import input: {color_dict}")
         space = device.pluginProps.get("color_space", "Indigo")
         if space == "Indigo":
             return color_dict
@@ -381,7 +381,7 @@ class Plugin(indigo.PluginBase):
                 device.updateStatesOnServer(states_list)
 
         # Device type specific processing.  No entry for ShimGeneric, it's all handled above
-        if not state_value:
+        if state_value is None:
             return
 
         if device.deviceTypeId in ["shimRelay", "shimOnOffSensor"]:
