@@ -49,8 +49,7 @@ class Plugin(indigo.PluginBase):
 
     def startup(self):
         self.logger.info("Starting MQTT Shims")
-        indigo.server.subscribeToBroadcast(u"com.flyingdiver.indigoplugin.mqtt", u"com.flyingdiver.indigoplugin.mqtt-message_queued",
-                                           "message_handler")
+        indigo.server.subscribeToBroadcast("com.flyingdiver.indigoplugin.mqtt", "com.flyingdiver.indigoplugin.mqtt-message_queued", "message_handler")
 
     def message_handler(self, notification):
         self.logger.debug(f"message_handler: MQTT message {notification['message_type']} from {indigo.devices[int(notification['brokerID'])].name}")
@@ -320,15 +319,15 @@ class Plugin(indigo.PluginBase):
 
         if bool(device.pluginProps.get('SupportsBatteryLevel', False)):
             battery = self.recurseDict(device.pluginProps['battery_payload_key'], state_data)
-            device.updateStateOnServer('batteryLevel', battery, uiValue='{}%'.format(battery))
+            device.updateStateOnServer('batteryLevel', battery, uiValue=f'{battery}%')
 
         if bool(device.pluginProps.get('SupportsEnergyMeter', False)) and ("accumEnergyTotal" in device.states):
             energy = self.recurseDict(device.pluginProps['energy_payload_key'], state_data)
-            device.updateStateOnServer('accumEnergyTotal', energy, uiValue='{} kWh'.format(energy))
+            device.updateStateOnServer('accumEnergyTotal', energy, uiValue=f'{energy} kWh')
 
         if bool(device.pluginProps.get('SupportsEnergyMeterCurPower', False)) and ("curEnergyLevel" in device.states):
             power = self.recurseDict(device.pluginProps['power_payload_key'], state_data)
-            device.updateStateOnServer('curEnergyLevel', power, uiValue='{} W'.format(power))
+            device.updateStateOnServer('curEnergyLevel', power, uiValue=f'{power} W')
 
         # do multi-states processing
 
@@ -400,7 +399,7 @@ class Plugin(indigo.PluginBase):
                 else:
                     isOn = (state_value == on_value)
 
-            self.logger.debug(u"{}: Updating state to {}".format(device.name, isOn))
+            self.logger.debug(f"{device.name}: Updating state to {isOn}")
             device.updateStateOnServer(key='onOffState', value=isOn)
 
             if device.pluginProps["shimSensorSubtype"] == "Generic":
@@ -492,77 +491,65 @@ class Plugin(indigo.PluginBase):
             if device.pluginProps["shimSensorSubtype"] == "Generic":
                 precision = device.pluginProps.get("shimSensorPrecision", "2")
                 device.updateStateImageOnServer(indigo.kStateImageSel.NoImage)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision),
-                                           uiValue=u'{:.{prec}f}'.format(value, prec=precision))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=f'{value:.{precision}f}')
 
             elif device.pluginProps["shimSensorSubtype"] == "Temperature-F":
                 precision = device.pluginProps.get("shimSensorPrecision", "1")
                 device.updateStateImageOnServer(indigo.kStateImageSel.TemperatureSensorOn)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision),
-                                           uiValue=u'{:.{prec}f} °F'.format(value, prec=precision))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=f'{value:.{precision}f} °F')
 
             elif device.pluginProps["shimSensorSubtype"] == "Temperature-C":
                 precision = device.pluginProps.get("shimSensorPrecision", "1")
                 device.updateStateImageOnServer(indigo.kStateImageSel.TemperatureSensorOn)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision),
-                                           uiValue=u'{:.{prec}f} °C'.format(value, prec=precision))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=f'{value:.{precision}f} °C')
 
             elif device.pluginProps["shimSensorSubtype"] == "Humidity":
                 precision = device.pluginProps.get("shimSensorPrecision", "0")
                 device.updateStateImageOnServer(indigo.kStateImageSel.HumiditySensorOn)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision),
-                                           uiValue=u'{:.{prec}f}%'.format(value, prec=precision))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=f'{value:.{precision}f}%')
 
             elif device.pluginProps["shimSensorSubtype"] == "Pressure-inHg":
                 precision = device.pluginProps.get("shimSensorPrecision", "2")
                 device.updateStateImageOnServer(indigo.kStateImageSel.NoImage)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision),
-                                           uiValue=u'{:.{prec}f} inHg'.format(value, prec=precision))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=f'{value:.{precision}f} inHg')
 
             elif device.pluginProps["shimSensorSubtype"] == "Pressure-mb":
                 precision = device.pluginProps.get("shimSensorPrecision", "2")
                 device.updateStateImageOnServer(indigo.kStateImageSel.NoImage)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision),
-                                           uiValue=u'{:.{prec}f} mb'.format(value, prec=precision))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=f'{value:.{precision}f} ,b')
 
             elif device.pluginProps["shimSensorSubtype"] == "Power-W":
                 precision = device.pluginProps.get("shimSensorPrecision", "0")
                 device.updateStateImageOnServer(indigo.kStateImageSel.EnergyMeterOn)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision),
-                                           uiValue=u'{:.{prec}f} W'.format(value, prec=precision))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=f'{value:.{precision}f} W')
 
             elif device.pluginProps["shimSensorSubtype"] == "Voltage":
                 precision = device.pluginProps.get("shimSensorPrecision", "2")
                 device.updateStateImageOnServer(indigo.kStateImageSel.EnergyMeterOn)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision),
-                                           uiValue=u'{:.{prec}f} V'.format(value, prec=precision))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=f'{value:.{precision}f} V')
 
             elif device.pluginProps["shimSensorSubtype"] == "Current":
                 precision = device.pluginProps.get("shimSensorPrecision", "2")
                 device.updateStateImageOnServer(indigo.kStateImageSel.EnergyMeterOn)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision),
-                                           uiValue=u'{:.{prec}f} A'.format(value, prec=precision))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=f'{value:.{precision}f} A')
 
             elif device.pluginProps["shimSensorSubtype"] == "Luminance":
                 precision = device.pluginProps.get("shimSensorPrecision", "0")
                 device.updateStateImageOnServer(indigo.kStateImageSel.LightSensorOn)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision),
-                                           uiValue=u'{:.{prec}f} lux'.format(value, prec=precision))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=f'{value:.{precision}f} lux')
 
             elif device.pluginProps["shimSensorSubtype"] == "Luminance%":
                 precision = device.pluginProps.get("shimSensorPrecision", "0")
                 device.updateStateImageOnServer(indigo.kStateImageSel.LightSensorOn)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision),
-                                           uiValue=u'{:.{prec}f}%'.format(value, prec=precision))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=f'{value:.{precision}f}%')
 
             elif device.pluginProps["shimSensorSubtype"] == "ppm":
                 precision = device.pluginProps.get("shimSensorPrecision", "0")
                 device.updateStateImageOnServer(indigo.kStateImageSel.NoImage)
-                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision),
-                                           uiValue=u'{:.{prec}f} ppm'.format(value, prec=precision))
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=f'{value:.{precision}f} ppm')
 
             else:
-                self.logger.debug(u"{}: update, unknown shimSensorSubtype: {}".format(device.name, device.pluginProps["shimSensorSubtype"]))
+                self.logger.debug(f"{device.name}: update, unknown shimSensorSubtype: {device.pluginProps['shimSensorSubtype']}")
 
         # Now do any triggers
 
@@ -576,7 +563,7 @@ class Plugin(indigo.PluginBase):
                         indigo.trigger.execute(trigger)
 
     def recurseDict(self, key_string, data_dict):
-        self.logger.threaddebug(u"recurseDict key_string = {}, data_dict= {}".format(key_string, data_dict))
+        self.logger.threaddebug(f"recurseDict key_string = {key_string}, data_dict= {data_dict}")
         try:
             if key_string == u'.':
                 return data_dict
@@ -792,20 +779,20 @@ class Plugin(indigo.PluginBase):
                 payload = device.pluginProps.get("status_action_payload", "")
                 topic = pystache.render(action_template, {'uniqueID': device.address})
                 self.publish_topic(device, topic, payload)
-                self.logger.info(u"Sent '{}' Status Request".format(device.name))
+                self.logger.info(f"Sent '{device.name}' Status Request")
 
         #       elif action.deviceAction == indigo.kUniversalAction.EnergyReset:
-        #             self.logger.debug(u"{}: actionControlUniversal: EnergyReset".format(device.name))
+        #           self.logger.debug(f"{device.name}: actionControlUniversal: EnergyReset")
         #           dev.updateStateOnServer("accumEnergyTotal", 0.0)
 
         else:
-            self.logger.error(u"{}: actionControlUniversal: Unsupported action requested: {}".format(device.name, action.deviceAction))
+            self.logger.error(f"{device.name}: actionControlUniversal: Unsupported action requested: {action.deviceAction}")
 
     def publish_topic(self, device, topic, payload):
 
         mqttPlugin = indigo.server.getPlugin("com.flyingdiver.indigoplugin.mqtt")
         if not mqttPlugin.isEnabled():
-            self.logger.error(u"MQTT plugin not enabled, publish_topic aborting.")
+            self.logger.error("MQTT Connector plugin not enabled, publish_topic aborting.")
             return
 
         brokerID = int(device.pluginProps['brokerID'])
@@ -816,7 +803,7 @@ class Plugin(indigo.PluginBase):
             'retain': 0,
         }
         mqttPlugin.executeAction("publish", deviceId=brokerID, props=props, waitUntilDone=False)
-        self.logger.debug(u"{}: publish_topic: {} -> {}".format(device.name, topic, payload))
+        self.logger.debug(f"{device.name}: publish_topic: {topic} -> {payload}")
 
     ########################################
     # PluginConfig methods
@@ -880,7 +867,7 @@ class Plugin(indigo.PluginBase):
             except (Exception,):
                 pass
 
-        self.logger.info(f"\n{yaml.safe_dump(template, allow_unicode=True, width=120, indent=4, default_flow_style=False).decode('utf-8')}")
+        self.logger.info(f"\n{yaml.safe_dump(template, allow_unicode=True, width=120, indent=4, default_flow_style=False)}")
         return True
 
     def pickDeviceTemplate(self, filter=None, valuesDict=None, typeId=0, targetId=0):
@@ -935,16 +922,14 @@ class Plugin(indigo.PluginBase):
                     if trigger.pluginId == 'com.flyingdiver.indigoplugin.mqtt' and trigger.pluginTypeId == 'topicMatch':
                         if trigger.globalProps['com.flyingdiver.indigoplugin.mqtt']['message_type'] == template['message_type']:
                             # found a match, bail out
-                            self.logger.debug(
-                                "Skipping trigger creation, existing trigger for message type '{}' found: {}".format(template['message_type'],
-                                                                                                                     trigger.name))
+                            self.logger.debug(f"Skipping trigger creation, existing trigger for message type '{template['message_type']}' found: {trigger.name}")
                             return True
                 except (Exception,):
                     pass
 
             try:
                 indigo.pluginEvent.create(
-                    name="{} {} Trigger".format(template['type'], valuesDict['address']),
+                    name=f"{template['type']} {valuesDict['address']} Trigger",
                     pluginId="com.flyingdiver.indigoplugin.mqtt",
                     pluginTypeId="topicMatch",
                     props={
@@ -954,7 +939,7 @@ class Plugin(indigo.PluginBase):
                         "match_list": json.loads(template['trigger']['match_list'])
                     })
             except Exception as e:
-                self.logger.error("Error calling indigo.pluginEvent.create(): {}".format(e.message))
+                self.logger.error(f"Error calling indigo.pluginEvent.create(): {e.message}")
 
         return True
     
