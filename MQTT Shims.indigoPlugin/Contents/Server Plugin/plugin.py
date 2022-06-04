@@ -363,7 +363,7 @@ class Plugin(indigo.PluginBase):
                         self.logger.debug(f"{device.name}: adding to states_list: {safe_key}, {states_dict[key]}, {type(states_dict[key])}")
                         if type(states_dict[key]) in (int, bool):
                             states_list.append({'key': safe_key, 'value': states_dict[key]})
-                        if type(states_dict[key]) in (str, unicode):
+                        if type(states_dict[key]) in (str):
                             states_list.append({'key': safe_key, 'value': states_dict[key]})
                         elif isinstance(type(states_dict[key]), float):
                             states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
@@ -606,13 +606,13 @@ class Plugin(indigo.PluginBase):
         stateList = indigo.PluginBase.getDeviceStateList(self, device)
         add_states = device.pluginProps.get("states_list", indigo.List())
         for key in add_states:
-            dynamic_state = self.getDeviceStateDictForStringType(unicode(key), unicode(key), unicode(key))
+            dynamic_state = self.getDeviceStateDictForStringType(str(key), str(key), str(key))
             stateList.append(dynamic_state)
         self.logger.threaddebug(f"{device.name}: getDeviceStateList returning: {stateList}")
         return stateList
 
     @staticmethod
-    def getBrokerDevices(filter="", valuesDict=None, typeId="", targetId=0):
+    def getBrokerDevices(filter="", valuesDict=None, typeId="", targetId=0):st
         retList = []
         devicePlugin = valuesDict.get("devicePlugin", None)
         for dev in indigo.devices.iter():
@@ -867,7 +867,7 @@ class Plugin(indigo.PluginBase):
             except (Exception,):
                 pass
 
-        self.logger.info(f"\n{yaml.safe_dump(template, allow_unicode=True, width=120, indent=4, default_flow_style=False)}")
+        self.logger.info(f"\n{yaml.safe_dump(template, width=120, indent=4, default_flow_style=False)}")
         return True
 
     def pickDeviceTemplate(self, filter=None, valuesDict=None, typeId=0, targetId=0):
