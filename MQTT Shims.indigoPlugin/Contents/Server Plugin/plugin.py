@@ -612,7 +612,7 @@ class Plugin(indigo.PluginBase):
         return stateList
 
     @staticmethod
-    def getBrokerDevices(filter="", valuesDict=None, typeId="", targetId=0):st
+    def getBrokerDevices(filter="", valuesDict=None, typeId="", targetId=0):
         retList = []
         devicePlugin = valuesDict.get("devicePlugin", None)
         for dev in indigo.devices.iter():
