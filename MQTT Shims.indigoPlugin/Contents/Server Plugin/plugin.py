@@ -361,11 +361,9 @@ class Plugin(indigo.PluginBase):
                         safe_key = safeKey(key)
                         new_states.append(safe_key)
                         self.logger.debug(f"{device.name}: adding to states_list: {safe_key}, {states_dict[key]}, {type(states_dict[key])}")
-                        if type(states_dict[key]) in (int, bool):
+                        if type(states_dict[key]) in (int, bool, str):
                             states_list.append({'key': safe_key, 'value': states_dict[key]})
-                        if type(states_dict[key]) in (str):
-                            states_list.append({'key': safe_key, 'value': states_dict[key]})
-                        elif isinstance(type(states_dict[key]), float):
+                        elif type(states_dict[key]) is float:
                             states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
                         else:
                             states_list.append({'key': safe_key, 'value': json.dumps(states_dict[key])})
