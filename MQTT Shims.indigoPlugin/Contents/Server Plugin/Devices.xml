@@ -320,8 +320,8 @@
             <SupportURL>http://forums.indigodomo.com/viewforum.php?f=214</SupportURL>
 			<Field id="SupportsOnState" type="checkbox" defaultValue="false" hidden="true" />
 			<Field id="SupportsSensorValue" type="checkbox" defaultValue="false" hidden="true" />
-			<Field type="checkbox" id="SupportsColor" defaultValue="true" hidden="true" />  <!-- Also set in deviceStartComm() -->
-			<Field type="checkbox" id="SupportsWhite" defaultValue="true" hidden="true" />
+			<Field id="SupportsColor" type="checkbox" defaultValue="true" hidden="true" />  <!-- Also set in deviceStartComm() -->
+			<Field id="SupportsWhite" type="checkbox" defaultValue="true" hidden="true" />
 			
             <Field id="states_list" type="list" hidden="true"><List class="self" method="getStateList"/></Field>
 

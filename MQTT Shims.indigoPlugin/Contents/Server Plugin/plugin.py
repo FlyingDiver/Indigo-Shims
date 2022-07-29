@@ -89,6 +89,30 @@ class Plugin(indigo.PluginBase):
         self.shimDevices.remove(device.id)
         self.messageTypesWanted.remove(device.pluginProps['message_type'])
 
+    def validateDeviceConfigUi(self, valuesDict, typeId, devId):
+        self.logger.debug("validateDeviceConfigUi, devId={}, typeId={}, valuesDict = {}".format(devId, typeId, valuesDict))
+
+        if typeId == "shimRelay":
+            valuesDict["SupportsOnState"] = True
+        elif typeId == "shimDimmer":
+            valuesDict["SupportsOnState"] = False
+            valuesDict["SupportsSensorValue"] = True
+        elif typeId == "shimColor":
+            valuesDict["SupportsOnState"] = False
+            valuesDict["SupportsSensorValue"] = True
+            valuesDict["SupportsColor"] = True
+            valuesDict["SupportsWhite"] = True
+        elif typeId == "shimOnOffSensor":
+            valuesDict["SupportsOnState"] = True
+            valuesDict["SupportsSensorValue"] = False
+        elif typeId == "shimValueSensor":
+            valuesDict["SupportsOnState"] = False
+            valuesDict["SupportsSensorValue"] = True
+        elif typeId == "shimGeneric":
+            valuesDict["SupportsOnState"] = False
+            valuesDict["SupportsSensorValue"] = False
+        return True, valuesDict
+
     @staticmethod
     def didDeviceCommPropertyChange(oldDevice, newDevice):
         if oldDevice.pluginProps.get('SupportsBatteryLevel', None) != newDevice.pluginProps.get('SupportsBatteryLevel', None):
@@ -434,8 +458,10 @@ class Plugin(indigo.PluginBase):
 
             if state_value.lower() in ['off', 'false', '0']:
                 isOn = False
+                device.updateStateImageOnServer(indigo.kStateImageSel.DimmerOff)
             else:
                 isOn = True
+                device.updateStateImageOnServer(indigo.kStateImageSel.DimmerOn)
             self.logger.debug(f"{device.name}: Setting onOffState to {isOn}")
             states_list.append({'key': 'onOffState', 'value': isOn})
 
