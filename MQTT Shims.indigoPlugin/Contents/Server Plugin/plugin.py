@@ -657,7 +657,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.error(f"{device.name}: actionControlDevice: no action template")
                 return
 
-            payload = device.pluginProps.get("on_action_payload", "on")
+            payload = self.substitute(device.pluginProps.get("on_action_payload", "on"))
             topic = pystache.render(action_template, {'uniqueID': device.address})
             self.publish_topic(device, topic, payload)
 
@@ -667,7 +667,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.error(f"{device.name}: actionControlDevice: no action template")
                 return
 
-            payload = device.pluginProps.get("off_action_payload", "off")
+            payload = self.substitute(device.pluginProps.get("off_action_payload", "off"))
             topic = pystache.render(action_template, {'uniqueID': device.address})
             self.publish_topic(device, topic, payload)
 
@@ -677,7 +677,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.error(f"{device.name}: actionControlDevice: no action template")
                 return
 
-            payload = device.pluginProps.get("toggle_action_payload", "toggle")
+            payload = self.substitute(device.pluginProps.get("toggle_action_payload", "toggle"))
             topic = pystache.render(action_template, {'uniqueID': device.address})
             self.publish_topic(device, topic, payload)
 
@@ -686,7 +686,7 @@ class Plugin(indigo.PluginBase):
             if not action_template:
                 self.logger.error(f"{device.name}: actionControlDevice: no action template")
                 return
-            payload_template = device.pluginProps.get("dimmer_action_payload", None)
+            payload_template = self.substitute(device.pluginProps.get("dimmer_action_payload", None))
             if not payload_template:
                 self.logger.error(f"{device.name}: actionControlDevice: no payload template")
                 return
@@ -706,7 +706,7 @@ class Plugin(indigo.PluginBase):
             if not action_template:
                 self.logger.error(f"{device.name}: actionControlDevice: no action template")
                 return
-            payload_template = device.pluginProps.get("dimmer_action_payload", None)
+            payload_template = self.substitute(evice.pluginProps.get("dimmer_action_payload", None))
             if not payload_template:
                 self.logger.error(f"{device.name}: actionControlDevice: no payload template")
                 return
@@ -725,7 +725,7 @@ class Plugin(indigo.PluginBase):
             if not action_template:
                 self.logger.error(f"{device.name}: actionControlDevice: no action template")
                 return
-            payload_template = device.pluginProps.get("dimmer_action_payload", None)
+            payload_template = self.substitute(device.pluginProps.get("dimmer_action_payload", None))
             if not payload_template:
                 self.logger.error(f"{device.name}: actionControlDevice: no payload template")
                 return
@@ -746,7 +746,7 @@ class Plugin(indigo.PluginBase):
                 if not action_template:
                     self.logger.error(f"{device.name}: actionControlDevice: no topic template for setting color temperature")
                     return
-                payload_template = device.pluginProps.get("set_temp_template", None)
+                payload_template = self.substitute(device.pluginProps.get("set_temp_template", None))
                 if not payload_template:
                     self.logger.error(f"{device.name}: actionControlDevice: no payload template for setting color temperature")
                     return
@@ -758,7 +758,7 @@ class Plugin(indigo.PluginBase):
                 if not action_template:
                     self.logger.error(f"{device.name}: actionControlDevice: no topic template for setting RGB color")
                     return
-                payload_template = device.pluginProps.get("set_rgb_template", None)
+                payload_template = self.substitute(device.pluginProps.get("set_rgb_template", None))
                 if not payload_template:
                     self.logger.error(f"{device.name}: actionControlDevice: no payload template for setting RGB color")
                     return
@@ -800,7 +800,7 @@ class Plugin(indigo.PluginBase):
                 if not action_template:
                     self.logger.error(f"{device.name}: actionControlUniversal: no action template")
                     return
-                payload = device.pluginProps.get("status_action_payload", "")
+                payload = self.substitute(device.pluginProps.get("status_action_payload", ""))
                 topic = pystache.render(action_template, {'uniqueID': device.address})
                 self.publish_topic(device, topic, payload)
                 self.logger.info(f"Sent '{device.name}' Status Request")
@@ -835,15 +835,12 @@ class Plugin(indigo.PluginBase):
 
     def closedPrefsConfigUi(self, valuesDict, userCancelled):
         if not userCancelled:
-            try:
-                self.logLevel = int(valuesDict[u"logLevel"])
-            except (Exception,):
-                self.logLevel = logging.INFO
+            self.logLevel = int(valuesDict.get("logLevel", logging.INFO))
             self.indigo_log_handler.setLevel(self.logLevel)
 
     ########################################
     # Custom Plugin Action callbacks (defined in Actions.xml)
-    ######################
+    ########################################
 
     def pickDevice(self, filter=None, valuesDict=None, typeId=0, targetId=0):
         retList = []
