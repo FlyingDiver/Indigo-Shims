@@ -249,7 +249,7 @@ class Plugin(indigo.PluginBase):
     def update(self, device, topic_parts, payload):
         state_value = None
         state_key = None
-        states_dict = None
+        multi_states_dict = None
 
         # first determine the UID (address) for this message
 
@@ -321,17 +321,15 @@ class Plugin(indigo.PluginBase):
                 device.pluginProps.get('state_location_payload_type', None) == "json"):
 
             if not state_data:
-                self.logger.error(f"{device.name}: No JSON payload data for state_value")
+                self.logger.error(f"{device.name}: No JSON payload state_data for state_value")
                 return
 
-            try:
-                state_key = device.pluginProps['state_location_payload_key']
-            except (Exception,):
+            if not (state_key := device.pluginProps.get('state_location_payload_key', None)):
                 self.logger.error(f"{device.name}: error getting state_location_payload_key")
                 return
 
             try:
-                state_value = self.recurseDict(state_key, state_data)
+                state_value = self.find_key_value(state_key, state_data)
             except (Exception,):
                 self.logger.error(f"{device.name}: state_key {state_key} not found in state_data {state_data} aborting")
                 return
@@ -342,64 +340,57 @@ class Plugin(indigo.PluginBase):
         # these are supported for all devices
 
         if bool(device.pluginProps.get('SupportsBatteryLevel', False)):
-            battery = self.recurseDict(device.pluginProps['battery_payload_key'], state_data)
+            battery = self.find_key_value(device.pluginProps['battery_payload_key'], state_data)
             device.updateStateOnServer('batteryLevel', battery, uiValue=f'{battery}%')
 
         if bool(device.pluginProps.get('SupportsEnergyMeter', False)) and ("accumEnergyTotal" in device.states):
-            energy = self.recurseDict(device.pluginProps['energy_payload_key'], state_data)
+            energy = self.find_key_value(device.pluginProps['energy_payload_key'], state_data)
             device.updateStateOnServer('accumEnergyTotal', energy, uiValue=f'{energy} kWh')
 
         if bool(device.pluginProps.get('SupportsEnergyMeterCurPower', False)) and ("curEnergyLevel" in device.states):
-            power = self.recurseDict(device.pluginProps['power_payload_key'], state_data)
+            power = self.find_key_value(device.pluginProps['power_payload_key'], state_data)
             device.updateStateOnServer('curEnergyLevel', power, uiValue=f'{power} W')
 
         # do multi-states processing
 
         self.logger.debug(f"{device.name}: Raw payload = {payload}")
 
-        states_key = device.pluginProps.get('state_dict_payload_key', None)
-        self.logger.debug(f"{device.name}: states_key= {states_key}")
-        if states_key:
-            try:
-                data = json.loads(payload)
-            except (Exception,):
-                self.logger.debug(f"{device.name}: JSON decode error for payload, aborting")
-                return
-            self.logger.debug(f"{device.name}: Decoded payload = {data}")
-            states_dict = self.recurseDict(states_key, data)
-            self.logger.debug(f"{device.name}: states_dict = {states_dict}")
-            if type(states_dict) != dict:
-                self.logger.error(f"{device.name}: Device config error, bad Multi-States Key value: {states_key}")
-                states_dict = None
+        multi_states_key = device.pluginProps.get('state_dict_payload_key', None)
+        self.logger.debug(f"{device.name}: multi_states_key= {multi_states_key}")
+        multi_states_dict = self.find_key_value(multi_states_key, state_data)
+        self.logger.debug(f"{device.name}: multi_states_dict = {multi_states_dict}")
+        if type(multi_states_dict) != dict:
+            self.logger.error(f"{device.name}: Device config error, bad Multi-States Key value: {multi_states_key}")
+            multi_states_dict = None
 
-            if not len(states_dict) > 0:
-                self.logger.warning(f"{device.name}: Possible device config error, Multi-States Key {states_key} returns empty dict.")
-                states_dict = None
+        if not len(multi_states_dict) > 0:
+            self.logger.warning(f"{device.name}: Possible device config error, Multi-States Key {multi_states_key} returns empty dict.")
+            multi_states_dict = None
 
-            if states_dict:
-                states_list = []
-                old_states = device.pluginProps.get("states_list", indigo.List())
-                new_states = indigo.List()
-                for key in states_dict:
-                    if states_dict[key] is not None:
-                        safe_key = safeKey(key)
-                        new_states.append(safe_key)
-                        self.logger.debug(f"{device.name}: adding to states_list: {safe_key}, {states_dict[key]}, {type(states_dict[key])}")
-                        if type(states_dict[key]) in (int, bool, str):
-                            states_list.append({'key': safe_key, 'value': states_dict[key]})
-                        elif type(states_dict[key]) is float:
-                            states_list.append({'key': safe_key, 'value': states_dict[key], 'decimalPlaces': 2})
-                        else:
-                            states_list.append({'key': safe_key, 'value': json.dumps(states_dict[key])})
+        if multi_states_dict:
+            states_list = []
+            old_states = device.pluginProps.get("states_list", indigo.List())
+            new_states = indigo.List()
+            for key in multi_states_dict:
+                if multi_states_dict[key] is not None:
+                    safe_key = safeKey(key)
+                    new_states.append(safe_key)
+                    self.logger.debug(f"{device.name}: adding to states_list: {safe_key}, {multi_states_dict[key]}, {type(multi_states_dict[key])}")
+                    if type(multi_states_dict[key]) in (int, bool, str):
+                        states_list.append({'key': safe_key, 'value': multi_states_dict[key]})
+                    elif type(multi_states_dict[key]) is float:
+                        states_list.append({'key': safe_key, 'value': multi_states_dict[key], 'decimalPlaces': 2})
+                    else:
+                        states_list.append({'key': safe_key, 'value': json.dumps(multi_states_dict[key])})
 
-                if set(old_states) != set(new_states):
-                    self.logger.threaddebug(f"{device.name}: update, new_states: {new_states}")
-                    self.logger.threaddebug(f"{device.name}: update, states_list: {states_list}")
-                    newProps = device.pluginProps
-                    newProps["states_list"] = new_states
-                    device.replacePluginPropsOnServer(newProps)
-                    device.stateListOrDisplayStateIdChanged()
-                device.updateStatesOnServer(states_list)
+            if set(old_states) != set(new_states):
+                self.logger.threaddebug(f"{device.name}: update, new_states: {new_states}")
+                self.logger.threaddebug(f"{device.name}: update, states_list: {states_list}")
+                newProps = device.pluginProps
+                newProps["states_list"] = new_states
+                device.replacePluginPropsOnServer(newProps)
+                device.stateListOrDisplayStateIdChanged()
+            device.updateStatesOnServer(states_list)
 
         # Device type specific processing.  No entry for ShimGeneric, it's all handled above
         if state_value is None:
@@ -452,9 +443,9 @@ class Plugin(indigo.PluginBase):
             states_list = []
 
             value_key = device.pluginProps['value_location_payload_key']
-            brightness = self.recurseDict(value_key, state_data)
+            brightness = self.find_key_value(value_key, state_data)
             self.logger.debug(
-                f"{device.name}: shimDimmer, state_key = {state_key}, value_key = {value_key}, data = {state_data}, state = {state_value}, brightness = {brightness}")
+                f"{device.name}: shimDimmer, state_key = {state_key}, value_key = {value_key}, state_data = {state_data}, state = {state_value}, brightness = {brightness}")
 
             if state_value.lower() in ['off', 'false', '0']:
                 isOn = False
@@ -475,7 +466,7 @@ class Plugin(indigo.PluginBase):
             states_list = []
 
             color_value_key = device.pluginProps['color_value_payload_key']
-            color_values = self.recurseDict(color_value_key, state_data)
+            color_values = self.find_key_value(color_value_key, state_data)
             if color_values:
                 color_values = self.convert_color_space_import(device, color_values)
 
@@ -486,7 +477,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(f"{device.name}: Updating states: {states_list}")
 
             color_temp_key = device.pluginProps['color_temp_payload_key']
-            color_temp = self.recurseDict(color_temp_key, state_data)
+            color_temp = self.find_key_value(color_temp_key, state_data)
 
             if color_temp:
                 color_temp = self.convert_color_temp_import(device, color_temp)
@@ -586,11 +577,11 @@ class Plugin(indigo.PluginBase):
                     if state_name in states_dict:
                         indigo.trigger.execute(trigger)
 
-    def recurseDict(self, key_string, data_dict):
-        self.logger.threaddebug(f"recurseDict key_string = {key_string}, data_dict= {data_dict}")
+    def find_key_value(self, key_string, data_dict):
+        self.logger.threaddebug(f"find_key_value key_string = '{key_string}', data_dict= {data_dict}")
         try:
-            if key_string == u'.':
-                return data_dict
+            if key_string == '.':
+                value = data_dict
 
             elif '.' not in key_string:
                 try:
@@ -599,24 +590,27 @@ class Plugin(indigo.PluginBase):
                     else:
                         new_data = data_dict.get(key_string, None)
                 except (Exception,):
-                    return None
+                    value = None
                 else:
-                    return new_data
+                    value = new_data
 
             else:
                 split = key_string.split('.', 1)
-                self.logger.threaddebug(f"recurseDict split[0] = {split[0]}, split[1] = {split[1]}")
+                self.logger.threaddebug(f"find_key_value split[0] = {split[0]}, split[1] = {split[1]}")
                 try:
                     if split[0][0] == '[':
                         new_data = data_dict[int(split[0][1:-1])]
                     else:
                         new_data = data_dict[split[0]]
                 except (Exception,):
-                    return None
+                    value = None
                 else:
-                    return self.recurseDict(split[1], new_data)
+                    value = self.find_key_value(split[1], new_data)
         except Exception as e:
-            self.logger.error(f"recurseDict error: {e}")
+            self.logger.error(f"find_key_value error: {e}")
+        else:
+            self.logger.threaddebug(f"find_key_value result = {value}")
+            return value
 
     @staticmethod
     def getStateList(filter, valuesDict, typeId, deviceId):
