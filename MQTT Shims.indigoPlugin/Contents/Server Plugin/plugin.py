@@ -351,46 +351,44 @@ class Plugin(indigo.PluginBase):
             power = self.find_key_value(device.pluginProps['power_payload_key'], state_data)
             device.updateStateOnServer('curEnergyLevel', power, uiValue=f'{power} W')
 
-        # do multi-states processing
-
-        self.logger.debug(f"{device.name}: Raw payload = {payload}")
-
+        # do multi-states processing, if any
         multi_states_key = device.pluginProps.get('state_dict_payload_key', None)
         self.logger.debug(f"{device.name}: multi_states_key= {multi_states_key}")
-        multi_states_dict = self.find_key_value(multi_states_key, state_data)
-        self.logger.debug(f"{device.name}: multi_states_dict = {multi_states_dict}")
-        if type(multi_states_dict) != dict:
-            self.logger.error(f"{device.name}: Device config error, bad Multi-States Key value: {multi_states_key}")
-            multi_states_dict = None
+        if multi_states_key:
+            multi_states_dict = self.find_key_value(multi_states_key, state_data)
+            self.logger.debug(f"{device.name}: multi_states_dict = {multi_states_dict}")
+            if type(multi_states_dict) != dict:
+                self.logger.error(f"{device.name}: Device config error, bad Multi-States Key value: {multi_states_key}")
+                multi_states_dict = None
 
-        if not len(multi_states_dict) > 0:
-            self.logger.warning(f"{device.name}: Possible device config error, Multi-States Key {multi_states_key} returns empty dict.")
-            multi_states_dict = None
+            if not len(multi_states_dict) > 0:
+                self.logger.warning(f"{device.name}: Possible device config error, Multi-States Key {multi_states_key} returns empty dict.")
+                multi_states_dict = None
 
-        if multi_states_dict:
-            states_list = []
-            old_states = device.pluginProps.get("states_list", indigo.List())
-            new_states = indigo.List()
-            for key in multi_states_dict:
-                if multi_states_dict[key] is not None:
-                    safe_key = safeKey(key)
-                    new_states.append(safe_key)
-                    self.logger.debug(f"{device.name}: adding to states_list: {safe_key}, {multi_states_dict[key]}, {type(multi_states_dict[key])}")
-                    if type(multi_states_dict[key]) in (int, bool, str):
-                        states_list.append({'key': safe_key, 'value': multi_states_dict[key]})
-                    elif type(multi_states_dict[key]) is float:
-                        states_list.append({'key': safe_key, 'value': multi_states_dict[key], 'decimalPlaces': 2})
-                    else:
-                        states_list.append({'key': safe_key, 'value': json.dumps(multi_states_dict[key])})
+            if multi_states_dict:
+                states_list = []
+                old_states = device.pluginProps.get("states_list", indigo.List())
+                new_states = indigo.List()
+                for key in multi_states_dict:
+                    if multi_states_dict[key] is not None:
+                        safe_key = safeKey(key)
+                        new_states.append(safe_key)
+                        self.logger.debug(f"{device.name}: adding to states_list: {safe_key}, {multi_states_dict[key]}, {type(multi_states_dict[key])}")
+                        if type(multi_states_dict[key]) in (int, bool, str):
+                            states_list.append({'key': safe_key, 'value': multi_states_dict[key]})
+                        elif type(multi_states_dict[key]) is float:
+                            states_list.append({'key': safe_key, 'value': multi_states_dict[key], 'decimalPlaces': 2})
+                        else:
+                            states_list.append({'key': safe_key, 'value': json.dumps(multi_states_dict[key])})
 
-            if set(old_states) != set(new_states):
-                self.logger.threaddebug(f"{device.name}: update, new_states: {new_states}")
-                self.logger.threaddebug(f"{device.name}: update, states_list: {states_list}")
-                newProps = device.pluginProps
-                newProps["states_list"] = new_states
-                device.replacePluginPropsOnServer(newProps)
-                device.stateListOrDisplayStateIdChanged()
-            device.updateStatesOnServer(states_list)
+                if set(old_states) != set(new_states):
+                    self.logger.threaddebug(f"{device.name}: update, new_states: {new_states}")
+                    self.logger.threaddebug(f"{device.name}: update, states_list: {states_list}")
+                    newProps = device.pluginProps
+                    newProps["states_list"] = new_states
+                    device.replacePluginPropsOnServer(newProps)
+                    device.stateListOrDisplayStateIdChanged()
+                device.updateStatesOnServer(states_list)
 
         # Device type specific processing.  No entry for ShimGeneric, it's all handled above
         if state_value is None:
