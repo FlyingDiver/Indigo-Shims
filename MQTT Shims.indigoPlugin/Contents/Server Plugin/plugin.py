@@ -277,7 +277,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.error(f"{device.name}: error getting uid_location_payload_key, aborting")
                 return
             try:
-                uid = json_payload[uid_location_payload_key]
+                uid = str(json_payload[uid_location_payload_key])
             except (Exception,):
                 self.logger.error(f"{device.name}: error getting uid value from payload, aborting")
                 return
@@ -562,6 +562,26 @@ class Plugin(indigo.PluginBase):
                 precision = device.pluginProps.get("shimSensorPrecision", "0")
                 device.updateStateImageOnServer(indigo.kStateImageSel.NoImage)
                 device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=f'{value:.{precision}f} ppm')
+
+            elif device.pluginProps["shimSensorSubtype"] == "speed-mph":
+                precision = device.pluginProps.get("shimSensorPrecision", "0")
+                device.updateStateImageOnServer(indigo.kStateImageSel.NoImage)
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=f'{value:.{precision}f} mph')
+
+            elif device.pluginProps["shimSensorSubtype"] == "speed-kph":
+                precision = device.pluginProps.get("shimSensorPrecision", "0")
+                device.updateStateImageOnServer(indigo.kStateImageSel.NoImage)
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=f'{value:.{precision}f} kph')
+
+            elif device.pluginProps["shimSensorSubtype"] == "quantity-in":
+                precision = device.pluginProps.get("shimSensorPrecision", "0")
+                device.updateStateImageOnServer(indigo.kStateImageSel.NoImage)
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=f'{value:.{precision}f}"')
+
+            elif device.pluginProps["shimSensorSubtype"] == "quantity-cm":
+                precision = device.pluginProps.get("shimSensorPrecision", "0")
+                device.updateStateImageOnServer(indigo.kStateImageSel.NoImage)
+                device.updateStateOnServer(key='sensorValue', value=value, decimalPlaces=int(precision), uiValue=f'{value:.{precision}f} cm')
 
             else:
                 self.logger.debug(f"{device.name}: update, unknown shimSensorSubtype: {device.pluginProps['shimSensorSubtype']}")
