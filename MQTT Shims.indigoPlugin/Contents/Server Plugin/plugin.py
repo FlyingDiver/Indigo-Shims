@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 ####################
 
+import importlib.util
+import sys
 import os
 import logging
 import json
@@ -41,6 +43,7 @@ class Plugin(indigo.PluginBase):
 
         self.triggers = {}
         self.shimDevices = []
+        self.decoders = {}
         self.messageTypesWanted = []
         self.messageQueue = Queue()
         self.mqttPlugin = indigo.server.getPlugin("com.flyingdiver.indigoplugin.mqtt")
@@ -113,12 +116,14 @@ class Plugin(indigo.PluginBase):
             valuesDict["SupportsSensorValue"] = False
         return True, valuesDict
 
-    @staticmethod
-    def didDeviceCommPropertyChange(oldDevice, newDevice):
-        if oldDevice.pluginProps.get('SupportsBatteryLevel', None) != newDevice.pluginProps.get('SupportsBatteryLevel', None):
+    def didDeviceCommPropertyChange(self, oldDevice, newDevice):
+        if oldDevice.pluginProps.get('SupportsBatteryLevel') != newDevice.pluginProps.get('SupportsBatteryLevel'):
             return True
-        if oldDevice.pluginProps.get('message_type', None) != newDevice.pluginProps.get('message_type', None):
+        if oldDevice.pluginProps.get('message_type') != newDevice.pluginProps.get('message_type'):
             return True
+        if oldDevice.pluginProps.get('custom_decoder') != newDevice.pluginProps.get('custom_decoder'):
+            if oldDevice.id in self.decoders:
+                del self.decoders[oldDevice.id]
         return False
 
     def triggerStartProcessing(self, trigger):
@@ -357,7 +362,7 @@ class Plugin(indigo.PluginBase):
         if multi_states_key:
             multi_states_dict = self.find_key_value(multi_states_key, state_data)
             self.logger.debug(f"{device.name}: multi_states_dict = {multi_states_dict}")
-            if type(multi_states_dict) != dict:
+            if type(multi_states_dict) is not dict:
                 self.logger.error(f"{device.name}: Device config error, bad Multi-States Key value: {multi_states_key}")
                 multi_states_dict = None
 
@@ -366,31 +371,77 @@ class Plugin(indigo.PluginBase):
                 multi_states_dict = None
 
             if multi_states_dict:
-                states_list = []
+                state_updates = []
                 old_states = device.pluginProps.get("states_list", indigo.List())
                 new_states = indigo.List()
                 for key in multi_states_dict:
                     if multi_states_dict[key] is not None:
                         safe_key = safeKey(key)
                         new_states.append(safe_key)
-                        self.logger.debug(f"{device.name}: adding to states_list: {safe_key}, {multi_states_dict[key]}, {type(multi_states_dict[key])}")
+                        self.logger.debug(f"{device.name}: adding to state_updates: {safe_key}, {multi_states_dict[key]}, {type(multi_states_dict[key])}")
                         if type(multi_states_dict[key]) in (int, bool, str):
-                            states_list.append({'key': safe_key, 'value': multi_states_dict[key]})
+                            state_updates.append({'key': safe_key, 'value': multi_states_dict[key]})
                         elif type(multi_states_dict[key]) is float:
-                            states_list.append({'key': safe_key, 'value': multi_states_dict[key], 'decimalPlaces': 2})
+                            state_updates.append({'key': safe_key, 'value': multi_states_dict[key], 'decimalPlaces': 2})
                         else:
-                            states_list.append({'key': safe_key, 'value': json.dumps(multi_states_dict[key])})
+                            state_updates.append({'key': safe_key, 'value': json.dumps(multi_states_dict[key])})
 
                 if set(old_states) != set(new_states):
                     self.logger.threaddebug(f"{device.name}: update, new_states: {new_states}")
-                    self.logger.threaddebug(f"{device.name}: update, states_list: {states_list}")
+                    self.logger.threaddebug(f"{device.name}: update, states_list: {state_updates}")
                     newProps = device.pluginProps
                     newProps["states_list"] = new_states
                     device.replacePluginPropsOnServer(newProps)
                     device.stateListOrDisplayStateIdChanged()
-                device.updateStatesOnServer(states_list)
+                device.updateStatesOnServer(state_updates)
+
+        # do custom decoder processing, if any
+
+        if not self.decoders.get(device.id):    # if we don't have a decoder for this device, try to import one
+            decoder_file = device.pluginProps.get('custom_decoder')
+            if decoder_file != '0' and device.deviceTypeId == "shimGeneric":
+                decoder_name = os.path.basename(decoder_file).split('.')[0]
+                self.logger.debug(f"{device.name}: Importing custom decoder {decoder_name} @ '{decoder_file}'")
+                try:
+                    decoder_spec = importlib.util.spec_from_file_location(decoder_name, decoder_file)
+                    module = importlib.util.module_from_spec(decoder_spec)
+                    sys.modules[decoder_name] = module
+                    decoder_spec.loader.exec_module(module)
+                    decoder = getattr(module, decoder_name)
+                except (Exception,):
+                    self.logger.error(f"{device.name}: Custom decoder {decoder_name} @ '{decoder_file}' import error: {sys.exc_info()[0]}")
+                    decoder = None
+                else:
+                    self.logger.debug(f"{device.name}: Custom decoder {decoder_name} @ '{decoder_file}' imported successfully")
+                    self.decoders[device.id] = decoder
+
+        if decoder := self.decoders.get(device.id):
+            self.logger.debug(f"{device.name}: Using cached Custom decoder {decoder.__name__}")
+            try:
+                decoder_output = decoder.decode(state_data)
+            except (Exception,):
+                self.logger.error(f"{device.name}: Decode error: {sys.exc_info()[0]}")
+                decoder_output = None
+
+            if decoder_output:
+                state_updates = []
+                new_states = indigo.List()
+                for key in decoder_output:
+                    safe_key = safeKey(key)
+                    new_states.append(safe_key)
+                    self.logger.debug(f"{device.name}: adding to state_updates: {safe_key}, {decoder_output[key]}, {type(decoder_output[key])}")
+                    state_updates.append({'key': safe_key, 'value': decoder_output[key]})
+
+                device = indigo.devices[device.id]  # refresh device object
+                old_states = device.pluginProps.get("states_list", indigo.List())
+                newProps = device.pluginProps
+                newProps["states_list"] = list(old_states) + list(new_states)
+                device.replacePluginPropsOnServer(newProps)
+                device.stateListOrDisplayStateIdChanged()
+                device.updateStatesOnServer(state_updates)
 
         # Device type specific processing.  No entry for ShimGeneric, it's all handled above
+
         if state_value is None:
             return
 
@@ -438,7 +489,7 @@ class Plugin(indigo.PluginBase):
                     device.updateStateImageOnServer(indigo.kStateImageSel.DimmerOff)
 
         if device.deviceTypeId in ["shimDimmer", "shimColor"]:
-            states_list = []
+            state_updates = []
 
             value_key = device.pluginProps['value_location_payload_key']
             brightness = self.find_key_value(value_key, state_data)
@@ -452,16 +503,16 @@ class Plugin(indigo.PluginBase):
                 isOn = True
                 device.updateStateImageOnServer(indigo.kStateImageSel.DimmerOn)
             self.logger.debug(f"{device.name}: Setting onOffState to {isOn}")
-            states_list.append({'key': 'onOffState', 'value': isOn})
+            state_updates.append({'key': 'onOffState', 'value': isOn})
 
             if brightness is not None and isOn:
                 brightness = self.convert_brightness_import(device, brightness)
                 self.logger.debug(f"{device.name}: Updating brightnessLevel to {brightness}")
-                states_list.append({'key': 'brightnessLevel', 'value': brightness})
-            device.updateStatesOnServer(states_list)
+                state_updates.append({'key': 'brightnessLevel', 'value': brightness})
+            device.updateStatesOnServer(state_updates)
 
         if device.deviceTypeId == "shimColor":
-            states_list = []
+            state_updates = []
 
             color_value_key = device.pluginProps['color_value_payload_key']
             color_values = self.find_key_value(color_value_key, state_data)
@@ -469,10 +520,10 @@ class Plugin(indigo.PluginBase):
                 color_values = self.convert_color_space_import(device, color_values)
 
                 self.logger.debug(f"{device.name}: Updating color values to {color_values}")
-                states_list.append({'key': 'redLevel', 'value': color_values['redLevel']})
-                states_list.append({'key': 'greenLevel', 'value': color_values['greenLevel']})
-                states_list.append({'key': 'blueLevel', 'value': color_values['blueLevel']})
-                self.logger.debug(f"{device.name}: Updating states: {states_list}")
+                state_updates.append({'key': 'redLevel', 'value': color_values['redLevel']})
+                state_updates.append({'key': 'greenLevel', 'value': color_values['greenLevel']})
+                state_updates.append({'key': 'blueLevel', 'value': color_values['blueLevel']})
+                self.logger.debug(f"{device.name}: Updating states: {state_updates}")
 
             color_temp_key = device.pluginProps['color_temp_payload_key']
             color_temp = self.find_key_value(color_temp_key, state_data)
@@ -480,8 +531,8 @@ class Plugin(indigo.PluginBase):
             if color_temp:
                 color_temp = self.convert_color_temp_import(device, color_temp)
                 self.logger.debug(f"{device.name}: Updating color temperature to {color_temp}")
-                states_list.append({'key': 'whiteTemperature', 'value': color_temp})
-            device.updateStatesOnServer(states_list)
+                state_updates.append({'key': 'whiteTemperature', 'value': color_temp})
+            device.updateStatesOnServer(state_updates)
 
         if device.deviceTypeId == "shimValueSensor":
             try:
@@ -655,6 +706,28 @@ class Plugin(indigo.PluginBase):
             if dev.protocol == indigo.kProtocol.Plugin and dev.pluginId == "com.flyingdiver.indigoplugin.mqtt" and dev.deviceTypeId != 'aggregator':
                 retList.append((dev.id, dev.name))
         retList.sort(key=lambda tup: tup[1])
+        return retList
+
+    def get_decoder_list(self, filter="", valuesDict=None, typeId="", targetId=0):
+        locations = ["./Decoders", f"{indigo.server.getInstallFolderPath()}/{self.pluginPrefs.get('decoders_folder', 'Decoders')}"]
+        decoders = {}
+
+        for decoder_dir in locations:
+
+            # iterate through the  decoder directory, make list of names and paths
+            # r=root, d=directories, f = files
+
+            for root, d, f in os.walk(decoder_dir):
+                for file in f:
+                    (base, ext) = os.path.splitext(file)
+                    if ext == '.py':
+                        self.logger.debug(f"Found Python file {file} in {root}")
+                        decoders[base] = os.path.join(root, file)
+
+        retList = [(0, "None")]
+        for key in decoders:
+            retList.append((decoders[key], key))
+        self.logger.debug(f"{retList}")
         return retList
 
     ########################################
@@ -866,7 +939,7 @@ class Plugin(indigo.PluginBase):
         device = indigo.devices[int(valuesDict["deviceID"])]
         template = {'type': device.deviceTypeId}
         props = {}
-        for key, value in device.pluginProps.iteritems():
+        for key, value in device.pluginProps.items():
             if isinstance(value, indigo.List):
                 continue
             if isinstance(value, indigo.Dict):
@@ -905,7 +978,7 @@ class Plugin(indigo.PluginBase):
 
     def pickDeviceTemplate(self, filter=None, valuesDict=None, typeId=0, targetId=0):
 
-        locations = ["./Templates", indigo.server.getInstallFolderPath() + '/' + self.pluginPrefs.get("externalTemplates", "MQTT Shim Templates")]
+        locations = ["./Templates", f"{indigo.server.getInstallFolderPath()}/{self.pluginPrefs.get('externalTemplates', 'MQTT Shim Templates')}"]
         templates = {}
 
         for template_dir in locations:
@@ -919,8 +992,6 @@ class Plugin(indigo.PluginBase):
                     (base, ext) = os.path.splitext(file)
                     if ext == '.yaml':
                         templates[base] = os.path.join(root, file)
-                for x in d:
-                    self.logger.debug(f"Found directory {x} in {root}")  # need to look in here too
 
         retList = []
         for key in templates:
