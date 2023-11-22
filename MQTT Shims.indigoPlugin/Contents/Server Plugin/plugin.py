@@ -399,7 +399,7 @@ class Plugin(indigo.PluginBase):
 
         if not self.decoders.get(device.id):    # if we don't have a decoder for this device, try to import one
             decoder_file = device.pluginProps.get('custom_decoder')
-            if decoder_file != '0' and device.deviceTypeId == "shimGeneric":
+            if decoder_file and decoder_file != '0':
                 decoder_name = os.path.basename(decoder_file).split('.')[0]
                 self.logger.debug(f"{device.name}: Importing custom decoder {decoder_name} @ '{decoder_file}'")
                 try:
@@ -410,7 +410,6 @@ class Plugin(indigo.PluginBase):
                     decoder = getattr(module, decoder_name)
                 except (Exception,):
                     self.logger.error(f"{device.name}: Custom decoder {decoder_name} @ '{decoder_file}' import error: {sys.exc_info()[0]}")
-                    decoder = None
                 else:
                     self.logger.debug(f"{device.name}: Custom decoder {decoder_name} @ '{decoder_file}' imported successfully")
                     self.decoders[device.id] = decoder

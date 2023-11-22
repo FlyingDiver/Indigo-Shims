@@ -133,7 +133,15 @@
             </Field>
 
             <Field id="devices_separator4" type="separator"/>
-            <Field id="SupportsBatteryLevel" type="checkbox" defaultValue="false">
+            <Field id="custom_decoder" type="menu">
+                <List class="self" filter="" method="get_decoder_list" dynamicReload="true"/>
+                <Label>Custom Decoder:</Label>
+            </Field>
+            <Field id="custom_decoder_note" type="label" fontSize="small" fontColor="darkgray">
+                <Label>Select a custom decoder, if needed.  See plugin documentation.</Label>
+            </Field>
+            <Field id="devices_separator5" type="separator"/>
+           <Field id="SupportsBatteryLevel" type="checkbox" defaultValue="false">
                 <Label>Device reports battery status:</Label>
             </Field>        	
             <Field id="battery_payload_key" type="textfield" defaultValue=""  visibleBindingId="SupportsBatteryLevel" visibleBindingValue="true">
@@ -289,6 +297,14 @@
                 <Label>Multi-States Key:</Label>
             </Field>           
             <Field id="devices_separator4" type="separator"/>
+            <Field id="custom_decoder" type="menu">
+                <List class="self" filter="" method="get_decoder_list" dynamicReload="true"/>
+                <Label>Custom Decoder:</Label>
+            </Field>
+            <Field id="custom_decoder_note" type="label" fontSize="small" fontColor="darkgray">
+                <Label>Select a custom decoder, if needed.  See plugin documentation.</Label>
+            </Field>
+            <Field id="devices_separator5" type="separator"/>
             <Field id="SupportsBatteryLevel" type="checkbox" defaultValue="false">
                 <Label>Device reports battery status:</Label>
             </Field>        	
@@ -503,6 +519,14 @@
                 <Label>Multi-States Key:</Label>
             </Field>           
             <Field id="devices_separator4" type="separator"/>
+            <Field id="custom_decoder" type="menu">
+                <List class="self" filter="" method="get_decoder_list" dynamicReload="true"/>
+                <Label>Custom Decoder:</Label>
+            </Field>
+            <Field id="custom_decoder_note" type="label" fontSize="small" fontColor="darkgray">
+                <Label>Select a custom decoder, if needed.  See plugin documentation.</Label>
+            </Field>
+            <Field id="devices_separator5" type="separator"/>
             <Field id="SupportsBatteryLevel" type="checkbox" defaultValue="false">
                 <Label>Device reports battery status:</Label>
             </Field>        	
@@ -630,7 +654,15 @@
                 <Label>Multi-States Key:</Label>
             </Field>
             <Field id="devices_separator4" type="separator"/>
-            <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false">
+            <Field id="custom_decoder" type="menu">
+                <List class="self" filter="" method="get_decoder_list" dynamicReload="true"/>
+                <Label>Custom Decoder:</Label>
+            </Field>
+            <Field id="custom_decoder_note" type="label" fontSize="small" fontColor="darkgray">
+                <Label>Select a custom decoder, if needed.  See plugin documentation.</Label>
+            </Field>
+            <Field id="devices_separator5" type="separator"/>
+           <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false">
                 <Label>Device supports status requests:</Label>
             </Field>        	
             <Field id="status_action_template" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
@@ -781,7 +813,15 @@
                 <Label>Multi-States Key:</Label>
             </Field>
             <Field id="devices_separator4" type="separator"/>
-            <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false">
+            <Field id="custom_decoder" type="menu">
+                <List class="self" filter="" method="get_decoder_list" dynamicReload="true"/>
+                <Label>Custom Decoder:</Label>
+            </Field>
+            <Field id="custom_decoder_note" type="label" fontSize="small" fontColor="darkgray">
+                <Label>Select a custom decoder, if needed.  See plugin documentation.</Label>
+            </Field>
+            <Field id="devices_separator5" type="separator"/>
+           <Field id="SupportsStatusRequest" type="checkbox" defaultValue="false">
                 <Label>Device supports status requests:</Label>
             </Field>        	
             <Field id="status_action_template" type="textfield" defaultValue=""  visibleBindingId="SupportsStatusRequest" visibleBindingValue="true">
