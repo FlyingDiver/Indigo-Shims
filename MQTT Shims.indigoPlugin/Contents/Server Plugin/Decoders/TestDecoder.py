@@ -4,13 +4,16 @@
 # that takes a single argument, which is the payload of the MQTT message.  The method must return a dictionary
 # of states to update, or None if there are no states to update.
 
-class Expand(object):
+class TestDecoder(object):
     def __init__(self, name):
         self.name = name
+        self.counter = 0
 
     def decode(self, payload):
     
-        new_states = {}
+        new_states = {'counter': self.counter}
+        self.counter += 1
+
         for key in payload:
             if type(payload[key]) is dict:
                 for subkey in payload[key]:

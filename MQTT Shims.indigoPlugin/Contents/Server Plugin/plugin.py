@@ -412,14 +412,14 @@ class Plugin(indigo.PluginBase):
                     self.logger.error(f"{device.name}: Custom decoder {decoder_name} @ '{decoder_file}' import error: {sys.exc_info()[0]}")
                 else:
                     self.logger.debug(f"{device.name}: Custom decoder {decoder_name} @ '{decoder_file}' imported successfully")
-                    self.decoders[device.id] = decoder
+                    self.decoders[device.id] = decoder(decoder.__name__)
 
         if decoder := self.decoders.get(device.id):
-            self.logger.debug(f"{device.name}: Using cached Custom decoder {decoder.__name__}")
+            self.logger.debug(f"{device.name}: Using cached Custom decoder {decoder.name}")
             try:
                 decoder_output = decoder.decode(state_data)
-            except (Exception,):
-                self.logger.error(f"{device.name}: Decode error: {sys.exc_info()[0]}")
+            except Exception as err:
+                self.logger.error(f"{device.name}: Decode error: {err}")
                 decoder_output = None
 
             if decoder_output:
@@ -428,7 +428,7 @@ class Plugin(indigo.PluginBase):
                 for key in decoder_output:
                     safe_key = safeKey(key)
                     new_states.append(safe_key)
-                    self.logger.debug(f"{device.name}: adding to state_updates: {safe_key}, {decoder_output[key]}, {type(decoder_output[key])}")
+                    self.logger.debug(f"{device.name}: adding to state_updates: {safe_key}, {decoder_output[key]}")
                     state_updates.append({'key': safe_key, 'value': decoder_output[key]})
 
                 device = indigo.devices[device.id]  # refresh device object
@@ -708,7 +708,7 @@ class Plugin(indigo.PluginBase):
         return retList
 
     def get_decoder_list(self, filter="", valuesDict=None, typeId="", targetId=0):
-        locations = ["./Decoders", f"{indigo.server.getInstallFolderPath()}/{self.pluginPrefs.get('decoders_folder', 'Decoders')}"]
+        locations = ["./Decoders", f"{indigo.server.getInstallFolderPath()}/{self.pluginPrefs.get('decoders_folder', '../Python3-includes/Decoders')}"]
         decoders = {}
 
         for decoder_dir in locations:
