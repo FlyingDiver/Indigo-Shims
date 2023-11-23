@@ -326,17 +326,16 @@ class Plugin(indigo.PluginBase):
                     self.logger.error(f"{device.name}: error obtaining state value from topic field {topic_field}")
                     state_value = None
 
-        elif (device.pluginProps.get('state_location', None) == "payload") and (device.pluginProps.get('state_location_payload_type', None) == "raw"):
+        elif (device.pluginProps.get('state_location') == "payload") and (device.pluginProps.get('state_location_payload_type') == "raw"):
             state_value = payload
 
-        elif (device.pluginProps.get('state_location', None) == "payload") and (
-                device.pluginProps.get('state_location_payload_type', None) == "json"):
+        elif (device.pluginProps.get('state_location') == "payload") and (device.pluginProps.get('state_location_payload_type') == "json"):
 
             if not state_data:
                 self.logger.error(f"{device.name}: No JSON payload state_data for state_value")
                 return
 
-            if not (state_key := device.pluginProps.get('state_location_payload_key', None)):
+            if not (state_key := device.pluginProps.get('state_location_payload_key')):
                 self.logger.error(f"{device.name}: error getting state_location_payload_key")
                 return
 
@@ -351,20 +350,20 @@ class Plugin(indigo.PluginBase):
 
         # these are supported for all devices
 
-        if bool(device.pluginProps.get('SupportsBatteryLevel', False)):
+        if bool(device.pluginProps.get('SupportsBatteryLevel')):
             battery = self.find_key_value(device.pluginProps['battery_payload_key'], state_data)
             device.updateStateOnServer('batteryLevel', battery, uiValue=f'{battery}%')
 
-        if bool(device.pluginProps.get('SupportsEnergyMeter', False)) and ("accumEnergyTotal" in device.states):
+        if bool(device.pluginProps.get('SupportsEnergyMeter')) and ("accumEnergyTotal" in device.states):
             energy = self.find_key_value(device.pluginProps['energy_payload_key'], state_data)
             device.updateStateOnServer('accumEnergyTotal', energy, uiValue=f'{energy} kWh')
 
-        if bool(device.pluginProps.get('SupportsEnergyMeterCurPower', False)) and ("curEnergyLevel" in device.states):
+        if bool(device.pluginProps.get('SupportsEnergyMeterCurPower')) and ("curEnergyLevel" in device.states):
             power = self.find_key_value(device.pluginProps['power_payload_key'], state_data)
             device.updateStateOnServer('curEnergyLevel', power, uiValue=f'{power} W')
 
         # do multi-states processing, if any
-        multi_states_key = device.pluginProps.get('state_dict_payload_key', None)
+        multi_states_key = device.pluginProps.get('state_dict_payload_key')
         self.logger.debug(f"{device.name}: multi_states_key= {multi_states_key}")
         if multi_states_key:
             multi_states_dict = self.find_key_value(multi_states_key, state_data)
@@ -715,7 +714,7 @@ class Plugin(indigo.PluginBase):
         return retList
 
     def get_decoder_list(self, filter="", valuesDict=None, typeId="", targetId=0):
-        decoder_dir = f"{indigo.server.getInstallFolderPath()}/../Python3-includes/Decoders')"
+        decoder_dir = f"{indigo.server.getInstallFolderPath()}/../Python3-includes/MQTT Shims Decoders"
         decoders = {}
 
         # iterate through the  decoder directory, make list of names and paths
