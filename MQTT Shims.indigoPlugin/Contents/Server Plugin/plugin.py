@@ -981,7 +981,7 @@ class Plugin(indigo.PluginBase):
 
     def pickDeviceTemplate(self, filter=None, valuesDict=None, typeId=0, targetId=0):
 
-        template_dir = f"{indigo.server.getInstallFolderPath()}/../Python3-includes/MQTT Shim Templates"
+        template_dir = f"{indigo.server.getInstallFolderPath()}/../Python3-includes/MQTT Shims Templates"
         templates = {}
 
         # iterate through the  template directory, make list of names and paths
