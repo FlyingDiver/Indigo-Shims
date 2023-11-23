@@ -5,6 +5,7 @@
 import importlib.util
 import sys
 import os
+import shutil
 import logging
 import json
 import yaml
@@ -35,7 +36,7 @@ class Plugin(indigo.PluginBase):
         pfmt = logging.Formatter('%(asctime)s.%(msecs)03d\t[%(levelname)8s] %(name)20s.%(funcName)-25s%(msg)s', datefmt='%Y-%m-%d %H:%M:%S')
         self.plugin_file_handler.setFormatter(pfmt)
         try:
-            self.logLevel = int(self.pluginPrefs[u"logLevel"])
+            self.logLevel = int(self.pluginPrefs["logLevel"])
         except (Exception,):
             self.logLevel = logging.INFO
         self.indigo_log_handler.setLevel(self.logLevel)
@@ -49,6 +50,12 @@ class Plugin(indigo.PluginBase):
         self.mqttPlugin = indigo.server.getPlugin("com.flyingdiver.indigoplugin.mqtt")
         if not self.mqttPlugin.isEnabled():
             self.logger.warning("MQTT Connector plugin not enabled!")
+
+        if old_version :=self.pluginPrefs.get("version", "0.0.0") != self.pluginVersion:
+            self.logger.debug(f"Upgrading plugin from version {old_version} to {self.pluginVersion}")
+            shutil.copytree("./Decoders/", f"{indigo.server.getInstallFolderPath()}/../Python3-includes/MQTT Shims Decoders/", dirs_exist_ok=True)
+            shutil.copytree("./Templates/", f"{indigo.server.getInstallFolderPath()}/../Python3-includes/MQTT Shims Templates/", dirs_exist_ok=True)
+            self.pluginPrefs["version"] = self.pluginVersion
 
     def startup(self):
         self.logger.info("Starting MQTT Shims")
@@ -408,8 +415,8 @@ class Plugin(indigo.PluginBase):
                     sys.modules[decoder_name] = module
                     decoder_spec.loader.exec_module(module)
                     decoder = getattr(module, decoder_name)
-                except (Exception,):
-                    self.logger.error(f"{device.name}: Custom decoder {decoder_name} @ '{decoder_file}' import error: {sys.exc_info()[0]}")
+                except Exception as err:
+                    self.logger.error(f"{device.name}: Custom decoder {decoder_name} @ '{decoder_file}' import error: {err}")
                 else:
                     self.logger.debug(f"{device.name}: Custom decoder {decoder_name} @ '{decoder_file}' imported successfully")
                     self.decoders[device.id] = decoder(decoder.__name__)
@@ -708,20 +715,18 @@ class Plugin(indigo.PluginBase):
         return retList
 
     def get_decoder_list(self, filter="", valuesDict=None, typeId="", targetId=0):
-        locations = ["./Decoders", f"{indigo.server.getInstallFolderPath()}/{self.pluginPrefs.get('decoders_folder', '../Python3-includes/Decoders')}"]
+        decoder_dir = f"{indigo.server.getInstallFolderPath()}/../Python3-includes/Decoders')"
         decoders = {}
 
-        for decoder_dir in locations:
+        # iterate through the  decoder directory, make list of names and paths
+        # r=root, d=directories, f = files
 
-            # iterate through the  decoder directory, make list of names and paths
-            # r=root, d=directories, f = files
-
-            for root, d, f in os.walk(decoder_dir):
-                for file in f:
-                    (base, ext) = os.path.splitext(file)
-                    if ext == '.py':
-                        self.logger.debug(f"Found Python file {file} in {root}")
-                        decoders[base] = os.path.join(root, file)
+        for root, d, f in os.walk(decoder_dir):
+            for file in f:
+                (base, ext) = os.path.splitext(file)
+                if ext == '.py':
+                    self.logger.debug(f"Found Python file {file} in {root}")
+                    decoders[base] = os.path.join(root, file)
 
         retList = [(0, "None")]
         for key in decoders:
@@ -977,20 +982,18 @@ class Plugin(indigo.PluginBase):
 
     def pickDeviceTemplate(self, filter=None, valuesDict=None, typeId=0, targetId=0):
 
-        locations = ["./Templates", f"{indigo.server.getInstallFolderPath()}/{self.pluginPrefs.get('externalTemplates', 'MQTT Shim Templates')}"]
+        template_dir = f"{indigo.server.getInstallFolderPath()}/../Python3-includes/MQTT Shim Templates"
         templates = {}
 
-        for template_dir in locations:
+        # iterate through the  template directory, make list of names and paths
+        # r=root, d=directories, f = files
 
-            # iterate through the  template directory, make list of names and paths
-            # r=root, d=directories, f = files
-
-            for root, d, f in os.walk(template_dir):
-                for file in f:
-                    self.logger.debug(f"Found File {file} in {root}")
-                    (base, ext) = os.path.splitext(file)
-                    if ext == '.yaml':
-                        templates[base] = os.path.join(root, file)
+        for root, d, f in os.walk(template_dir):
+            for file in f:
+                self.logger.debug(f"Found File {file} in {root}")
+                (base, ext) = os.path.splitext(file)
+                if ext == '.yaml':
+                    templates[base] = os.path.join(root, file)
 
         retList = []
         for key in templates:
