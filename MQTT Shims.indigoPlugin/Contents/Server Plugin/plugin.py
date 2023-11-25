@@ -15,7 +15,6 @@ from rgbxy import Converter, GamutA, GamutB, GamutC
 
 kCurDevVersCount = 0  # current version of plugin devices
 
-
 # Indigo really doesn't like dicts with keys that start with a number or symbol...
 def safeKey(key):
     if not key[0].isalpha():
@@ -33,14 +32,12 @@ class Plugin(indigo.PluginBase):
     def __init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs):
         indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
 
-        pfmt = logging.Formatter('%(asctime)s.%(msecs)03d\t[%(levelname)8s] %(name)20s.%(funcName)-25s%(msg)s', datefmt='%Y-%m-%d %H:%M:%S')
-        self.plugin_file_handler.setFormatter(pfmt)
-        try:
-            self.logLevel = int(self.pluginPrefs["logLevel"])
-        except (Exception,):
-            self.logLevel = logging.INFO
+        self.logLevel = int(pluginPrefs.get("logLevel", logging.INFO))
         self.indigo_log_handler.setLevel(self.logLevel)
-        self.logger.threaddebug(f"logLevel = {str(self.logLevel)}")
+        log_format = logging.Formatter('%(asctime)s.%(msecs)03d\t[%(levelname)8s] %(name)20s.%(funcName)-25s%(msg)s',datefmt='%Y-%m-%d %H:%M:%S')
+        self.plugin_file_handler.setFormatter(log_format)
+        self.plugin_file_handler.setLevel(self.logLevel)
+        self.logger.debug(f"logLevel = {self.logLevel}")
 
         self.triggers = {}
         self.shimDevices = []
@@ -50,6 +47,7 @@ class Plugin(indigo.PluginBase):
         self.mqttPlugin = indigo.server.getPlugin("com.flyingdiver.indigoplugin.mqtt")
         if not self.mqttPlugin.isEnabled():
             self.logger.warning("MQTT Connector plugin not enabled!")
+            return
 
         if old_version :=self.pluginPrefs.get("version", "0.0.0") != self.pluginVersion:
             self.logger.debug(f"Upgrading plugin from version {old_version} to {self.pluginVersion}")
@@ -66,7 +64,7 @@ class Plugin(indigo.PluginBase):
         self.messageQueue.put(notification)
 
     def shutdown(self):
-        self.logger.info("Shutting down MQTT Shims")
+        self.logger.info("Stopping MQTT Shims")
 
     def deviceStartComm(self, device):
         self.logger.info(f"{device.name}: Starting Device")
@@ -925,6 +923,8 @@ class Plugin(indigo.PluginBase):
         if not userCancelled:
             self.logLevel = int(valuesDict.get("logLevel", logging.INFO))
             self.indigo_log_handler.setLevel(self.logLevel)
+            self.plugin_file_handler.setLevel(self.logLevel)
+            self.logger.debug(f"logLevel = {self.logLevel}")
 
     ########################################
     # Custom Plugin Action callbacks (defined in Actions.xml)
