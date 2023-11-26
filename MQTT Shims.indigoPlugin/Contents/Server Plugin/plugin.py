@@ -376,12 +376,12 @@ class Plugin(indigo.PluginBase):
 
             if multi_states_dict:
                 state_updates = []
-                old_states = device.pluginProps.get("states_list", indigo.List())
-                new_states = indigo.List()
+                current_states = device.pluginProps.get("states_list", indigo.List())
+                decoder_states = indigo.List()
                 for key in multi_states_dict:
                     if multi_states_dict[key] is not None:
                         safe_key = safeKey(key)
-                        new_states.append(safe_key)
+                        decoder_states.append(safe_key)
                         self.logger.debug(f"{device.name}: adding to state_updates: {safe_key}, {multi_states_dict[key]}, {type(multi_states_dict[key])}")
                         if type(multi_states_dict[key]) in (int, bool, str):
                             state_updates.append({'key': safe_key, 'value': multi_states_dict[key]})
@@ -390,11 +390,11 @@ class Plugin(indigo.PluginBase):
                         else:
                             state_updates.append({'key': safe_key, 'value': json.dumps(multi_states_dict[key])})
 
-                if set(old_states) != set(new_states):
-                    self.logger.threaddebug(f"{device.name}: update, new_states: {new_states}")
+                if set(current_states) != set(decoder_states):
+                    self.logger.threaddebug(f"{device.name}: update, decoder_states: {decoder_states}")
                     self.logger.threaddebug(f"{device.name}: update, states_list: {state_updates}")
                     newProps = device.pluginProps
-                    newProps["states_list"] = new_states
+                    newProps["states_list"] = decoder_states
                     device.replacePluginPropsOnServer(newProps)
                     device.stateListOrDisplayStateIdChanged()
                 device.updateStatesOnServer(state_updates)
@@ -422,23 +422,27 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(f"{device.name}: Using cached Custom decoder {decoder.name}")
             try:
                 decoder_output = decoder.decode(state_data)
+                self.logger.debug(f"{device.name}: {decoder_output=}")
             except Exception as err:
                 self.logger.error(f"{device.name}: Decode error: {err}")
                 decoder_output = None
 
             if decoder_output:
                 state_updates = []
-                new_states = indigo.List()
+                decoder_states = indigo.List()
                 for key in decoder_output:
                     safe_key = safeKey(key)
-                    new_states.append(safe_key)
+                    decoder_states.append(safe_key)
                     self.logger.debug(f"{device.name}: adding to state_updates: {safe_key}, {decoder_output[key]}")
                     state_updates.append({'key': safe_key, 'value': decoder_output[key]})
 
                 device = indigo.devices[device.id]  # refresh device object
-                old_states = device.pluginProps.get("states_list", indigo.List())
+                current_states = device.pluginProps.get("states_list", indigo.List())
+                for key in decoder_states:
+                    if key not in current_states:
+                        current_states.append(key)
                 newProps = device.pluginProps
-                newProps["states_list"] = list(old_states) + list(new_states)
+                newProps["states_list"] = current_states
                 device.replacePluginPropsOnServer(newProps)
                 device.stateListOrDisplayStateIdChanged()
                 device.updateStatesOnServer(state_updates)
