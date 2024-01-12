@@ -383,10 +383,8 @@ class Plugin(indigo.PluginBase):
                         safe_key = safeKey(key)
                         decoder_states.append(safe_key)
                         self.logger.debug(f"{device.name}: adding to state_updates: {safe_key}, {multi_states_dict[key]}, {type(multi_states_dict[key])}")
-                        if type(multi_states_dict[key]) in (int, bool, str):
+                        if type(multi_states_dict[key]) in (int, bool, str, float):
                             state_updates.append({'key': safe_key, 'value': multi_states_dict[key]})
-                        elif type(multi_states_dict[key]) is float:
-                            state_updates.append({'key': safe_key, 'value': multi_states_dict[key], 'decimalPlaces': 2})
                         else:
                             state_updates.append({'key': safe_key, 'value': json.dumps(multi_states_dict[key])})
 
