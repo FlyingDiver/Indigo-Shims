@@ -45,9 +45,6 @@ class Plugin(indigo.PluginBase):
         self.messageTypesWanted = []
         self.messageQueue = Queue()
         self.mqttPlugin = indigo.server.getPlugin("com.flyingdiver.indigoplugin.mqtt")
-        if not self.mqttPlugin.isEnabled():
-            self.logger.warning("MQTT Connector plugin not enabled!")
-            return
 
         if old_version :=self.pluginPrefs.get("version", "0.0.0") != self.pluginVersion:
             self.logger.debug(f"Upgrading plugin from version {old_version} to {self.pluginVersion}")
@@ -57,6 +54,9 @@ class Plugin(indigo.PluginBase):
 
     def startup(self):
         self.logger.info("Starting MQTT Shims")
+        if not self.mqttPlugin.isEnabled():
+            return "MQTT Connector plugin not enabled!"
+
         indigo.server.subscribeToBroadcast("com.flyingdiver.indigoplugin.mqtt", "com.flyingdiver.indigoplugin.mqtt-message_queued", "message_handler")
 
     def message_handler(self, notification):
