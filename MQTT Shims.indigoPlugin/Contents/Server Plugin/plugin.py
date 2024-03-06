@@ -299,6 +299,8 @@ class Plugin(indigo.PluginBase):
         if device.pluginProps['address'].strip() != uid.strip():
             self.logger.debug(f"{device.name}: update uid mismatch: {device.pluginProps['address']} != {uid}")
             return
+        else:
+            self.logger.debug(f"{device.name}: update uid: {uid}")
 
         # get the JSON payload, if there is one
 
@@ -646,7 +648,7 @@ class Plugin(indigo.PluginBase):
                     indigo.trigger.execute(trigger)
                 elif trigger.pluginTypeId == "stateUpdated":
                     state_name = trigger.pluginProps["deviceState"]
-                    if state_name in states_dict:
+                    if state_name in multi_states_dict:
                         indigo.trigger.execute(trigger)
 
     def find_key_value(self, key_string, data_dict):
