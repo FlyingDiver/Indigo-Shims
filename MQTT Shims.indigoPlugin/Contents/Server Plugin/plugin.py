@@ -46,7 +46,7 @@ class Plugin(indigo.PluginBase):
         self.messageQueue = Queue()
         self.mqttPlugin = indigo.server.getPlugin("com.flyingdiver.indigoplugin.mqtt")
 
-        if old_version :=self.pluginPrefs.get("version", "0.0.0") != self.pluginVersion:
+        if old_version := self.pluginPrefs.get("version", "0.0.0") != self.pluginVersion:
             self.logger.debug(f"Upgrading plugin from version {old_version} to {self.pluginVersion}")
             shutil.copytree("./Decoders/", f"{indigo.server.getInstallFolderPath()}/../Python3-includes/MQTT Shims Decoders/", dirs_exist_ok=True)
             shutil.copytree("./Templates/", f"{indigo.server.getInstallFolderPath()}/../Python3-includes/MQTT Shims Templates/", dirs_exist_ok=True)
@@ -395,6 +395,7 @@ class Plugin(indigo.PluginBase):
                     newProps["states_list"] = decoder_states
                     device.replacePluginPropsOnServer(newProps)
                     device.stateListOrDisplayStateIdChanged()
+                self.logger.debug(f"{device.name}: updating device: {state_updates}")
                 device.updateStatesOnServer(state_updates)
 
         # do custom decoder processing, if any
@@ -446,9 +447,6 @@ class Plugin(indigo.PluginBase):
                 device.updateStatesOnServer(state_updates)
 
         # Device type specific processing.  No entry for ShimGeneric, it's all handled above
-
-        if state_value is None:
-            return
 
         if device.deviceTypeId in ["shimRelay", "shimOnOffSensor"]:
 
