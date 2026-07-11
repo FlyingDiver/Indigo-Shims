@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 ####################
 
+from __future__ import annotations
+
 import importlib.util
 import sys
 import os
@@ -11,12 +13,13 @@ import json
 import yaml
 import pystache
 from queue import Queue
+from typing import Any, Optional
 from rgbxy import Converter, GamutA, GamutB, GamutC
 
 kCurDevVersCount = 0  # current version of plugin devices
 
 # Indigo really doesn't like dicts with keys that start with a number or symbol...
-def safeKey(key):
+def safeKey(key: str) -> str:
     if not key[0].isalpha():
         return 'sk' + key
     else:
@@ -27,7 +30,7 @@ def safeKey(key):
 class Plugin(indigo.PluginBase):
 
     # shimValueSensor subtype -> (default precision, state image, uiValue unit suffix)
-    SENSOR_SUBTYPE_CONFIG = {
+    SENSOR_SUBTYPE_CONFIG: dict[str, tuple[str, int, str]] = {
         "Generic": ("2", indigo.kStateImageSel.NoImage, ""),
         "Temperature-F": ("1", indigo.kStateImageSel.TemperatureSensorOn, " °F"),
         "Temperature-C": ("1", indigo.kStateImageSel.TemperatureSensorOn, " °C"),
@@ -49,7 +52,7 @@ class Plugin(indigo.PluginBase):
     ########################################
     # Main Plugin methods
     ########################################
-    def __init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs):
+    def __init__(self, pluginId: str, pluginDisplayName: str, pluginVersion: str, pluginPrefs: indigo.Dict) -> None:
         indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
 
         self.logLevel = int(pluginPrefs.get("logLevel", logging.INFO))
@@ -72,21 +75,21 @@ class Plugin(indigo.PluginBase):
             shutil.copytree("./Templates/", f"{indigo.server.getInstallFolderPath()}/../Python3-includes/MQTT Shims Templates/", dirs_exist_ok=True)
             self.pluginPrefs["version"] = self.pluginVersion
 
-    def startup(self):
+    def startup(self) -> Optional[str]:
         self.logger.info("Starting MQTT Shims")
         if not self.mqttPlugin.isEnabled():
             return "MQTT Connector plugin not enabled!"
 
         indigo.server.subscribeToBroadcast("com.flyingdiver.indigoplugin.mqtt", "com.flyingdiver.indigoplugin.mqtt-message_queued", "message_handler")
 
-    def message_handler(self, notification):
+    def message_handler(self, notification: dict) -> None:
         self.logger.debug(f"message_handler: MQTT message {notification['message_type']} from {indigo.devices[int(notification['brokerID'])].name}")
         self.messageQueue.put(notification)
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         self.logger.info("Stopping MQTT Shims")
 
-    def deviceStartComm(self, device):
+    def deviceStartComm(self, device: indigo.Device) -> None:
         self.logger.info(f"{device.name}: Starting Device")
 
         instanceVers = int(device.pluginProps.get('devVersCount', 0))
@@ -111,13 +114,13 @@ class Plugin(indigo.PluginBase):
         self.shimDevices.append(device.id)
         self.messageTypesWanted.append(device.pluginProps['message_type'])
 
-    def deviceStopComm(self, device):
+    def deviceStopComm(self, device: indigo.Device) -> None:
         self.logger.info(f"{device.name}: Stopping Device")
         assert device.id in self.shimDevices
         self.shimDevices.remove(device.id)
         self.messageTypesWanted.remove(device.pluginProps['message_type'])
 
-    def validateDeviceConfigUi(self, valuesDict, typeId, devId):
+    def validateDeviceConfigUi(self, valuesDict: indigo.Dict, typeId: str, devId: int) -> tuple[bool, indigo.Dict]:
         self.logger.debug("validateDeviceConfigUi, devId={}, typeId={}, valuesDict = {}".format(devId, typeId, valuesDict))
 
         if typeId == "shimRelay":
@@ -141,7 +144,7 @@ class Plugin(indigo.PluginBase):
             valuesDict["SupportsSensorValue"] = False
         return True, valuesDict
 
-    def didDeviceCommPropertyChange(self, oldDevice, newDevice):
+    def didDeviceCommPropertyChange(self, oldDevice: indigo.Device, newDevice: indigo.Device) -> bool:
         if oldDevice.pluginProps.get('SupportsBatteryLevel') != newDevice.pluginProps.get('SupportsBatteryLevel'):
             return True
         if oldDevice.pluginProps.get('message_type') != newDevice.pluginProps.get('message_type'):
@@ -151,18 +154,18 @@ class Plugin(indigo.PluginBase):
                 del self.decoders[oldDevice.id]
         return False
 
-    def triggerStartProcessing(self, trigger):
+    def triggerStartProcessing(self, trigger: indigo.Trigger) -> None:
         self.logger.debug(f"{trigger.name}: Adding Trigger")
         assert trigger.pluginTypeId in ["deviceUpdated", "stateUpdated"]
         assert trigger.id not in self.triggers
         self.triggers[trigger.id] = trigger
 
-    def triggerStopProcessing(self, trigger):
+    def triggerStopProcessing(self, trigger: indigo.Trigger) -> None:
         self.logger.debug(f"{trigger.name}: Removing Trigger")
         assert trigger.id in self.triggers
         del self.triggers[trigger.id]
 
-    def runConcurrentThread(self):
+    def runConcurrentThread(self) -> None:
         try:
             while True:
                 self.processMessages()
@@ -171,7 +174,7 @@ class Plugin(indigo.PluginBase):
         except self.StopThread:
             pass
 
-    def processMessages(self):
+    def processMessages(self) -> None:
 
         while not self.messageQueue.empty():
             notification = self.messageQueue.get()
@@ -197,7 +200,7 @@ class Plugin(indigo.PluginBase):
     # Convert a brightness value from the external device-specific value to Indigo scale
 
     @staticmethod
-    def convert_brightness_import(device, brightness):
+    def convert_brightness_import(device: indigo.Device, brightness: float) -> float:
         scale = device.pluginProps.get("brightness_scale", "100")
         if scale == '255':
             brightness = int(round(100.0 * (brightness / 255.0)))
@@ -206,7 +209,7 @@ class Plugin(indigo.PluginBase):
     # Convert a brightness value from Indigo scale to the external device-specific value
 
     @staticmethod
-    def convert_brightness_export(device, brightness):
+    def convert_brightness_export(device: indigo.Device, brightness: float) -> float:
         scale = device.pluginProps.get("brightness_scale", "100")
         if scale == '255':
             brightness = int(round(255.0 * (brightness / 100.0)))
@@ -215,7 +218,7 @@ class Plugin(indigo.PluginBase):
     # Convert a color temperature value from the external device-specific value to Indigo scale
 
     @staticmethod
-    def convert_color_temp_import(device, color_temp):
+    def convert_color_temp_import(device: indigo.Device, color_temp: float) -> float:
         scale = device.pluginProps.get("color_temp_scale", "Kelvin")
         if scale == "Mirek":
             color_temp = int(round(1000000.0 / color_temp))
@@ -224,7 +227,7 @@ class Plugin(indigo.PluginBase):
     # Convert a color temperature value from Indigo scale to the external device-specific value
 
     @staticmethod
-    def convert_color_temp_export(device, color_temp):
+    def convert_color_temp_export(device: indigo.Device, color_temp: float) -> float:
         scale = device.pluginProps.get("color_temp_scale", "Kelvin")
         if scale == "Mirek":
             color_temp = int(round(1000000.0 / color_temp))
@@ -232,7 +235,7 @@ class Plugin(indigo.PluginBase):
 
     # Convert a color space dict from the external device-specific value to Indigo space
 
-    def convert_color_space_import(self, device, color_dict):
+    def convert_color_space_import(self, device: indigo.Device, color_dict: dict) -> dict:
         self.logger.debug(f"{device.name}: convert_color_space_import input: {color_dict}")
         space = device.pluginProps.get("color_space", "Indigo")
         if space == "Indigo":
@@ -255,7 +258,7 @@ class Plugin(indigo.PluginBase):
 
     # Convert a color space dict from Indigo scale to the external device-specific value
 
-    def convert_color_space_export(self, device, color_dict):
+    def convert_color_space_export(self, device: indigo.Device, color_dict: dict) -> dict:
         self.logger.debug(f"{device.name}: convert_color_space_export input: {color_dict}")
         space = device.pluginProps.get("color_space", "Indigo")
         if space == "Indigo":
@@ -276,7 +279,7 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(f"{device.name}: convert_color_space_export output: {output}")
             return output
 
-    def update(self, device, topic_parts, payload):
+    def update(self, device: indigo.Device, topic_parts: list[str], payload: str) -> None:
         state_value = None
         state_key = None
         multi_states_dict = None
@@ -587,7 +590,8 @@ class Plugin(indigo.PluginBase):
                     if state_name in updated_state_keys:
                         indigo.trigger.execute(trigger)
 
-    def _register_dynamic_states(self, device, raw_dict, updated_state_keys, skip_none=False, replace_states_list=True):
+    def _register_dynamic_states(self, device: indigo.Device, raw_dict: dict, updated_state_keys: set[str],
+                                  skip_none: bool = False, replace_states_list: bool = True) -> indigo.Device:
         # Turn a raw dict (from a multi-states payload or a custom decoder) into device states,
         # keeping the device's states_list in sync.  replace_states_list=True makes this run's
         # keys the device's whole states_list (stale keys are dropped); False unions them into
@@ -629,7 +633,7 @@ class Plugin(indigo.PluginBase):
         updated_state_keys.update(new_states)
         return device
 
-    def find_key_value(self, key_string, data_dict):
+    def find_key_value(self, key_string: str, data_dict: Optional[dict]) -> Any:
         self.logger.threaddebug(f"find_key_value key_string = '{key_string}', data_dict= {data_dict}")
         try:
             if key_string == '.':
@@ -665,14 +669,14 @@ class Plugin(indigo.PluginBase):
             return value
 
     @staticmethod
-    def getStateList(filter, valuesDict, typeId, deviceId):
+    def getStateList(filter: str, valuesDict: indigo.Dict, typeId: str, deviceId: int) -> list:
         returnList = list()
         if 'states_list' in valuesDict:
             for topic in valuesDict['states_list']:
                 returnList.append(topic)
         return returnList
 
-    def getDeviceStateList(self, device):
+    def getDeviceStateList(self, device: indigo.Device) -> list:
         stateList = indigo.PluginBase.getDeviceStateList(self, device)
         add_states = device.pluginProps.get("states_list", indigo.List())
         for key in add_states:
@@ -682,7 +686,7 @@ class Plugin(indigo.PluginBase):
         return stateList
 
     @staticmethod
-    def getBrokerDevices(filter="", valuesDict=None, typeId="", targetId=0):
+    def getBrokerDevices(filter: str = "", valuesDict: Optional[indigo.Dict] = None, typeId: str = "", targetId: int = 0) -> list:
         retList = []
         devicePlugin = valuesDict.get("devicePlugin", None)
         for dev in indigo.devices.iter():
@@ -691,7 +695,7 @@ class Plugin(indigo.PluginBase):
         retList.sort(key=lambda tup: tup[1])
         return retList
 
-    def get_decoder_list(self, filter="", valuesDict=None, typeId="", targetId=0):
+    def get_decoder_list(self, filter: str = "", valuesDict: Optional[indigo.Dict] = None, typeId: str = "", targetId: int = 0) -> list:
         decoder_dir = f"{indigo.server.getInstallFolderPath()}/../Python3-includes/MQTT Shims Decoders"
         decoders = {}
 
@@ -715,7 +719,7 @@ class Plugin(indigo.PluginBase):
     # Relay / Dimmer Action callback
     ########################################
 
-    def actionControlDevice(self, action, device):
+    def actionControlDevice(self, action: indigo.PluginAction, device: indigo.Device) -> None:
 
         if action.deviceAction == indigo.kDeviceAction.TurnOn:
             action_template = device.pluginProps.get("action_template", None)
@@ -849,7 +853,7 @@ class Plugin(indigo.PluginBase):
     # General Action callback
     ########################################
 
-    def actionControlUniversal(self, action, device):
+    def actionControlUniversal(self, action: indigo.PluginAction, device: indigo.Device) -> None:
 
         if action.deviceAction == indigo.kUniversalAction.RequestStatus or action.deviceAction == indigo.kUniversalAction.EnergyUpdate:
             self.logger.debug(f"{device.name}: actionControlUniversal: RequestStatus")
@@ -872,7 +876,7 @@ class Plugin(indigo.PluginBase):
         else:
             self.logger.error(f"{device.name}: actionControlUniversal: Unsupported action requested: {action.deviceAction}")
 
-    def publish_topic(self, device, topic, payload):
+    def publish_topic(self, device: indigo.Device, topic: str, payload: str) -> None:
 
         mqttPlugin = indigo.server.getPlugin("com.flyingdiver.indigoplugin.mqtt")
         if not mqttPlugin.isEnabled():
@@ -893,7 +897,7 @@ class Plugin(indigo.PluginBase):
     # PluginConfig methods
     ########################################
 
-    def closedPrefsConfigUi(self, valuesDict, userCancelled):
+    def closedPrefsConfigUi(self, valuesDict: indigo.Dict, userCancelled: bool) -> None:
         if not userCancelled:
             self.logLevel = int(valuesDict.get("logLevel", logging.INFO))
             self.indigo_log_handler.setLevel(self.logLevel)
@@ -904,7 +908,7 @@ class Plugin(indigo.PluginBase):
     # Custom Plugin Action callbacks (defined in Actions.xml)
     ########################################
 
-    def pickDevice(self, filter=None, valuesDict=None, typeId=0, targetId=0):
+    def pickDevice(self, filter: Optional[str] = None, valuesDict: Optional[indigo.Dict] = None, typeId: int = 0, targetId: int = 0) -> list:
         retList = []
         for devID in self.shimDevices:
             device = indigo.devices[int(devID)]
@@ -912,7 +916,7 @@ class Plugin(indigo.PluginBase):
         retList.sort(key=lambda tup: tup[1])
         return retList
 
-    def dumpYAML(self, valuesDict, typeId):
+    def dumpYAML(self, valuesDict: indigo.Dict, typeId: str) -> bool:
         device = indigo.devices[int(valuesDict["deviceID"])]
         template = {'type': device.deviceTypeId}
         props = {}
@@ -951,7 +955,7 @@ class Plugin(indigo.PluginBase):
         self.logger.info(f"\n{yaml.safe_dump(template, width=120, indent=4, default_flow_style=False)}")
         return True
 
-    def pickDeviceTemplate(self, filter=None, valuesDict=None, typeId=0, targetId=0):
+    def pickDeviceTemplate(self, filter: Optional[str] = None, valuesDict: Optional[indigo.Dict] = None, typeId: int = 0, targetId: int = 0) -> list:
 
         template_dir = f"{indigo.server.getInstallFolderPath()}/../Python3-includes/MQTT Shims Templates"
         templates = {}
@@ -973,7 +977,7 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(f"{retList}")
         return retList
 
-    def createDeviceFromTemplate(self, valuesDict, typeId):
+    def createDeviceFromTemplate(self, valuesDict: indigo.Dict, typeId: str) -> bool:
         self.logger.debug(f"createDeviceFromTemplate, typeId = {typeId}, valuesDict = {valuesDict}")
         with open(valuesDict['deviceTemplatePath'], 'r') as stream:
             template = yaml.safe_load(stream)
