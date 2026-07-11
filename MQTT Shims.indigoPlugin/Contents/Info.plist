@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
     <key>PluginVersion</key>
-    <string>2023.2.2</string>
+    <string>2025.0.1</string>
     <key>ServerApiVersion</key>
-    <string>3.4</string>
+    <string>3.8</string>
     <key>IwsApiVersion</key>
     <string>1.0.0</string>
     <key>LoadPriority</key>

@@ -260,6 +260,7 @@ class Plugin(indigo.PluginBase):
         state_value = None
         state_key = None
         multi_states_dict = None
+        decoder_output = None
         updated_state_keys = set()
 
         # first determine the UID (address) for this message
@@ -310,6 +311,55 @@ class Plugin(indigo.PluginBase):
         except (Exception,):
             state_data = None
 
+        # do custom decoder processing, if any
+
+        if not self.decoders.get(device.id):    # if we don't have a decoder for this device, try to import one
+            decoder_file = device.pluginProps.get('custom_decoder')
+            if decoder_file and decoder_file != '0':
+                decoder_name = os.path.basename(decoder_file).split('.')[0]
+                self.logger.debug(f"{device.name}: Importing custom decoder {decoder_name} @ '{decoder_file}'")
+                try:
+                    decoder_spec = importlib.util.spec_from_file_location(decoder_name, decoder_file)
+                    module = importlib.util.module_from_spec(decoder_spec)
+                    sys.modules[decoder_name] = module
+                    decoder_spec.loader.exec_module(module)
+                    decoder = getattr(module, decoder_name)
+                except Exception as err:
+                    self.logger.error(f"{device.name}: Custom decoder {decoder_name} @ '{decoder_file}' import error: {err}")
+                else:
+                    self.logger.debug(f"{device.name}: Custom decoder {decoder_name} @ '{decoder_file}' imported successfully")
+                    self.decoders[device.id] = decoder(decoder.__name__)
+
+        if decoder := self.decoders.get(device.id):
+            self.logger.debug(f"{device.name}: Using cached Custom decoder {decoder.name}")
+            try:
+                decoder_output = decoder.decode(state_data)
+                self.logger.debug(f"{device.name}: {decoder_output=}")
+            except Exception as err:
+                self.logger.error(f"{device.name}: Decode error: {err}")
+                decoder_output = None
+
+            if decoder_output:
+                state_updates = []
+                decoder_states = indigo.List()
+                for key in decoder_output:
+                    safe_key = safeKey(key)
+                    decoder_states.append(safe_key)
+                    self.logger.debug(f"{device.name}: adding to state_updates: {safe_key}, {decoder_output[key]}")
+                    state_updates.append({'key': safe_key, 'value': decoder_output[key]})
+
+                device = indigo.devices[device.id]  # refresh device object
+                current_states = device.pluginProps.get("states_list", indigo.List())
+                for key in decoder_states:
+                    if key not in current_states:
+                        current_states.append(key)
+                newProps = device.pluginProps
+                newProps["states_list"] = current_states
+                device.replacePluginPropsOnServer(newProps)
+                device.stateListOrDisplayStateIdChanged()
+                device.updateStatesOnServer(state_updates)
+                updated_state_keys.update(decoder_states)
+
         # Determine state (value) location, if any.  Generic Shims don't have a value.
 
         if device.deviceTypeId == "shimGeneric":
@@ -344,6 +394,22 @@ class Plugin(indigo.PluginBase):
                 state_value = self.find_key_value(state_key, state_data)
             except (Exception,):
                 self.logger.error(f"{device.name}: state_key {state_key} not found in state_data {state_data} aborting")
+                return
+
+        elif device.pluginProps.get('state_location') == "decoder":
+
+            if not decoder_output:
+                self.logger.error(f"{device.name}: No decoder output available for state value, aborting")
+                return
+
+            if not (decoder_key := device.pluginProps.get('state_location_decoder_key')):
+                self.logger.error(f"{device.name}: error getting state_location_decoder_key")
+                return
+
+            try:
+                state_value = self.find_key_value(decoder_key, decoder_output)
+            except (Exception,):
+                self.logger.error(f"{device.name}: decoder key {decoder_key} not found in decoder output, aborting")
                 return
 
         else:
@@ -402,55 +468,6 @@ class Plugin(indigo.PluginBase):
                     device.replacePluginPropsOnServer(newProps)
                     device.stateListOrDisplayStateIdChanged()
                 self.logger.debug(f"{device.name}: updating device: {state_updates}")
-                device.updateStatesOnServer(state_updates)
-                updated_state_keys.update(decoder_states)
-
-        # do custom decoder processing, if any
-
-        if not self.decoders.get(device.id):    # if we don't have a decoder for this device, try to import one
-            decoder_file = device.pluginProps.get('custom_decoder')
-            if decoder_file and decoder_file != '0':
-                decoder_name = os.path.basename(decoder_file).split('.')[0]
-                self.logger.debug(f"{device.name}: Importing custom decoder {decoder_name} @ '{decoder_file}'")
-                try:
-                    decoder_spec = importlib.util.spec_from_file_location(decoder_name, decoder_file)
-                    module = importlib.util.module_from_spec(decoder_spec)
-                    sys.modules[decoder_name] = module
-                    decoder_spec.loader.exec_module(module)
-                    decoder = getattr(module, decoder_name)
-                except Exception as err:
-                    self.logger.error(f"{device.name}: Custom decoder {decoder_name} @ '{decoder_file}' import error: {err}")
-                else:
-                    self.logger.debug(f"{device.name}: Custom decoder {decoder_name} @ '{decoder_file}' imported successfully")
-                    self.decoders[device.id] = decoder(decoder.__name__)
-
-        if decoder := self.decoders.get(device.id):
-            self.logger.debug(f"{device.name}: Using cached Custom decoder {decoder.name}")
-            try:
-                decoder_output = decoder.decode(state_data)
-                self.logger.debug(f"{device.name}: {decoder_output=}")
-            except Exception as err:
-                self.logger.error(f"{device.name}: Decode error: {err}")
-                decoder_output = None
-
-            if decoder_output:
-                state_updates = []
-                decoder_states = indigo.List()
-                for key in decoder_output:
-                    safe_key = safeKey(key)
-                    decoder_states.append(safe_key)
-                    self.logger.debug(f"{device.name}: adding to state_updates: {safe_key}, {decoder_output[key]}")
-                    state_updates.append({'key': safe_key, 'value': decoder_output[key]})
-
-                device = indigo.devices[device.id]  # refresh device object
-                current_states = device.pluginProps.get("states_list", indigo.List())
-                for key in decoder_states:
-                    if key not in current_states:
-                        current_states.append(key)
-                newProps = device.pluginProps
-                newProps["states_list"] = current_states
-                device.replacePluginPropsOnServer(newProps)
-                device.stateListOrDisplayStateIdChanged()
                 device.updateStatesOnServer(state_updates)
                 updated_state_keys.update(decoder_states)
 
