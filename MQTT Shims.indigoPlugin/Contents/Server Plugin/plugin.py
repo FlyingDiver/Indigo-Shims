@@ -521,9 +521,14 @@ class Plugin(indigo.PluginBase):
             state_updates.append({'key': 'onOffState', 'value': isOn})
 
             if brightness is not None and isOn:
-                brightness = self.convert_brightness_import(device, brightness)
-                self.logger.debug(f"{device.name}: Updating brightnessLevel to {brightness}")
-                state_updates.append({'key': 'brightnessLevel', 'value': brightness})
+                try:
+                    brightness = float(brightness)
+                except (TypeError, ValueError):
+                    self.logger.error(f"{device.name}: unable to convert brightness '{brightness}' to a number")
+                else:
+                    brightness = self.convert_brightness_import(device, brightness)
+                    self.logger.debug(f"{device.name}: Updating brightnessLevel to {brightness}")
+                    state_updates.append({'key': 'brightnessLevel', 'value': brightness})
             device.updateStatesOnServer(state_updates)
             updated_state_keys.update(entry['key'] for entry in state_updates)
 
@@ -545,9 +550,14 @@ class Plugin(indigo.PluginBase):
             color_temp = self.find_key_value(color_temp_key, state_data)
 
             if color_temp:
-                color_temp = self.convert_color_temp_import(device, color_temp)
-                self.logger.debug(f"{device.name}: Updating color temperature to {color_temp}")
-                state_updates.append({'key': 'whiteTemperature', 'value': color_temp})
+                try:
+                    color_temp = float(color_temp)
+                except (TypeError, ValueError):
+                    self.logger.error(f"{device.name}: unable to convert color temperature '{color_temp}' to a number")
+                else:
+                    color_temp = self.convert_color_temp_import(device, color_temp)
+                    self.logger.debug(f"{device.name}: Updating color temperature to {color_temp}")
+                    state_updates.append({'key': 'whiteTemperature', 'value': color_temp})
             device.updateStatesOnServer(state_updates)
             updated_state_keys.update(entry['key'] for entry in state_updates)
 
@@ -633,7 +643,7 @@ class Plugin(indigo.PluginBase):
         updated_state_keys.update(new_states)
         return device
 
-    def find_key_value(self, key_string: str, data_dict: Optional[dict]) -> Any:
+    def find_key_value(self, key_string: str, data_dict: Any) -> Any:
         self.logger.threaddebug(f"find_key_value key_string = '{key_string}', data_dict= {data_dict}")
         try:
             if key_string == '.':
@@ -688,7 +698,6 @@ class Plugin(indigo.PluginBase):
     @staticmethod
     def getBrokerDevices(filter: str = "", valuesDict: Optional[indigo.Dict] = None, typeId: str = "", targetId: int = 0) -> list:
         retList = []
-        devicePlugin = valuesDict.get("devicePlugin", None)
         for dev in indigo.devices.iter():
             if dev.protocol == indigo.kProtocol.Plugin and dev.pluginId == "com.flyingdiver.indigoplugin.mqtt" and dev.deviceTypeId != 'aggregator':
                 retList.append((dev.id, dev.name))
