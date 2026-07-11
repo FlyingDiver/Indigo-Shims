@@ -110,15 +110,20 @@ class Plugin(indigo.PluginBase):
             props["SupportsColor"] = True
             device.replacePluginPropsOnServer(props)
 
-        assert device.id not in self.shimDevices
+        if device.id in self.shimDevices:
+            self.logger.error(f"{device.name}: deviceStartComm called for an already-started device, ignoring")
+            return
         self.shimDevices.append(device.id)
         self.messageTypesWanted.append(device.pluginProps['message_type'])
 
     def deviceStopComm(self, device: indigo.Device) -> None:
         self.logger.info(f"{device.name}: Stopping Device")
-        assert device.id in self.shimDevices
+        if device.id not in self.shimDevices:
+            self.logger.error(f"{device.name}: deviceStopComm called for a device that wasn't started, ignoring")
+            return
         self.shimDevices.remove(device.id)
-        self.messageTypesWanted.remove(device.pluginProps['message_type'])
+        if device.pluginProps['message_type'] in self.messageTypesWanted:
+            self.messageTypesWanted.remove(device.pluginProps['message_type'])
 
     def validateDeviceConfigUi(self, valuesDict: indigo.Dict, typeId: str, devId: int) -> tuple[bool, indigo.Dict]:
         self.logger.debug("validateDeviceConfigUi, devId={}, typeId={}, valuesDict = {}".format(devId, typeId, valuesDict))
@@ -156,14 +161,15 @@ class Plugin(indigo.PluginBase):
 
     def triggerStartProcessing(self, trigger: indigo.Trigger) -> None:
         self.logger.debug(f"{trigger.name}: Adding Trigger")
-        assert trigger.pluginTypeId in ["deviceUpdated", "stateUpdated"]
-        assert trigger.id not in self.triggers
+        if trigger.pluginTypeId not in ["deviceUpdated", "stateUpdated"]:
+            self.logger.error(f"{trigger.name}: unexpected trigger type '{trigger.pluginTypeId}', ignoring")
+            return
         self.triggers[trigger.id] = trigger
 
     def triggerStopProcessing(self, trigger: indigo.Trigger) -> None:
         self.logger.debug(f"{trigger.name}: Removing Trigger")
-        assert trigger.id in self.triggers
-        del self.triggers[trigger.id]
+        if trigger.id in self.triggers:
+            del self.triggers[trigger.id]
 
     def runConcurrentThread(self) -> None:
         try:
@@ -179,10 +185,10 @@ class Plugin(indigo.PluginBase):
         while not self.messageQueue.empty():
             notification = self.messageQueue.get()
             if not notification:
-                return
+                continue
 
             if notification["message_type"] not in self.messageTypesWanted:
-                return
+                continue
 
             props = {'message_type': notification["message_type"]}
             brokerID = int(notification['brokerID'])
@@ -190,7 +196,7 @@ class Plugin(indigo.PluginBase):
                 message_data = self.mqttPlugin.executeAction("fetchQueuedMessage", deviceId=brokerID, props=props, waitUntilDone=True)
                 if message_data is None:
                     break
-                for deviceID in self.shimDevices:
+                for deviceID in list(self.shimDevices):    # snapshot: deviceStopComm may mutate concurrently
                     device = indigo.devices[deviceID]
                     if device.pluginProps['message_type'] == notification["message_type"]:
                         self.logger.debug(
@@ -220,7 +226,7 @@ class Plugin(indigo.PluginBase):
     @staticmethod
     def convert_color_temp_import(device: indigo.Device, color_temp: float) -> float:
         scale = device.pluginProps.get("color_temp_scale", "Kelvin")
-        if scale == "Mirek":
+        if scale == "Mirek" and color_temp:
             color_temp = int(round(1000000.0 / color_temp))
         return color_temp
 
@@ -229,7 +235,7 @@ class Plugin(indigo.PluginBase):
     @staticmethod
     def convert_color_temp_export(device: indigo.Device, color_temp: float) -> float:
         scale = device.pluginProps.get("color_temp_scale", "Kelvin")
-        if scale == "Mirek":
+        if scale == "Mirek" and color_temp:
             color_temp = int(round(1000000.0 / color_temp))
         return color_temp
 
@@ -575,8 +581,15 @@ class Plugin(indigo.PluginBase):
                 if any(x in function for x in prohibited):
                     self.logger.warning(f"{device.name}: Invalid method in adjustmentFunction: '{function}'")
                 else:
-                    x = value
-                    value = eval(function)
+                    # Evaluate in a restricted namespace: the incoming value as `x`, plus a
+                    # handful of safe numeric builtins.  No __import__/open/etc. are reachable,
+                    # and a bad formula logs an error instead of crashing the message thread.
+                    safe_builtins = {"abs": abs, "round": round, "min": min, "max": max,
+                                     "int": int, "float": float, "pow": pow}
+                    try:
+                        value = eval(function, {"__builtins__": safe_builtins}, {"x": value})
+                    except Exception as err:
+                        self.logger.error(f"{device.name}: error evaluating adjustmentFunction '{function}': {err}")
             self.logger.debug(f"{device.name}: Updating state to {value}")
 
             subtype_config = self.SENSOR_SUBTYPE_CONFIG.get(device.pluginProps["shimSensorSubtype"])
@@ -591,7 +604,7 @@ class Plugin(indigo.PluginBase):
 
         # Now do any triggers
 
-        for trigger in self.triggers.values():
+        for trigger in list(self.triggers.values()):    # snapshot: triggerStopProcessing may mutate concurrently
             if trigger.pluginProps["shimDevice"] == str(device.id):
                 if trigger.pluginTypeId == "deviceUpdated":
                     indigo.trigger.execute(trigger)
