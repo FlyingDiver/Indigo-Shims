@@ -1,0 +1,17 @@
+*.pyc
+/.gitignore
+/shim3.png
+/256shim3.png
+/512shim3.png
+/Icons
+/MQTT Shims.indigoPlugin.zip
+/Test Scripts
+/zigbee2mqtt.io | 📘 Zigbee2mqtt documentation.webloc
+
+.DS_Store
+
+MQTT Shims.indigoPlugin/.idea/
+
+.idea/
+
+/MQTT Shims.indigoPlugin/Contents/Packages/
