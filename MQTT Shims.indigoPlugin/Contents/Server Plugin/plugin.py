@@ -69,11 +69,16 @@ class Plugin(indigo.PluginBase):
         self.messageQueue = Queue()
         self.mqttPlugin = indigo.server.getPlugin("com.flyingdiver.indigoplugin.mqtt")
 
-        if old_version := self.pluginPrefs.get("version", "0.0.0") != self.pluginVersion:
+        old_version = self.pluginPrefs.get("version", "0.0.0")
+        if old_version != self.pluginVersion:
             self.logger.debug(f"Upgrading plugin from version {old_version} to {self.pluginVersion}")
-            shutil.copytree("./Decoders/", f"{indigo.server.getInstallFolderPath()}/../Python3-includes/MQTT Shims Decoders/", dirs_exist_ok=True)
-            shutil.copytree("./Templates/", f"{indigo.server.getInstallFolderPath()}/../Python3-includes/MQTT Shims Templates/", dirs_exist_ok=True)
-            self.pluginPrefs["version"] = self.pluginVersion
+            try:
+                shutil.copytree("./Decoders/", f"{indigo.server.getInstallFolderPath()}/../Python3-includes/MQTT Shims Decoders/", dirs_exist_ok=True)
+                shutil.copytree("./Templates/", f"{indigo.server.getInstallFolderPath()}/../Python3-includes/MQTT Shims Templates/", dirs_exist_ok=True)
+            except Exception as err:
+                self.logger.error(f"Error copying Decoders/Templates during upgrade: {err}")
+            else:
+                self.pluginPrefs["version"] = self.pluginVersion
 
     def startup(self) -> Optional[str]:
         self.logger.info("Starting MQTT Shims")
@@ -182,6 +187,10 @@ class Plugin(indigo.PluginBase):
 
     def processMessages(self) -> None:
 
+        # Re-fetch a fresh handle each pass: the cached one goes stale if the MQTT
+        # Connector plugin is reloaded/upgraded while we're running.
+        self.mqttPlugin = indigo.server.getPlugin("com.flyingdiver.indigoplugin.mqtt")
+
         while not self.messageQueue.empty():
             notification = self.messageQueue.get()
             if not notification:
@@ -279,7 +288,10 @@ class Plugin(indigo.PluginBase):
             else:
                 converter = Converter(GamutA)  # default?
 
-            x, y = converter.rgb_to_xy(2.55 * color_dict['redLevel'], 2.55 * color_dict['greenLevel'], 2.55 * color_dict['blueLevel'])
+            # A SetColorLevels action may carry only some channels; treat missing ones as 0.
+            x, y = converter.rgb_to_xy(2.55 * color_dict.get('redLevel', 0),
+                                       2.55 * color_dict.get('greenLevel', 0),
+                                       2.55 * color_dict.get('blueLevel', 0))
             self.logger.debug(f"{device.name}: rgb_to_xy output: {x} {y}")
             output = {'x': x, 'y': y}
             self.logger.debug(f"{device.name}: convert_color_space_export output: {output}")
@@ -829,7 +841,6 @@ class Plugin(indigo.PluginBase):
 
         elif action.deviceAction == indigo.kDeviceAction.SetColorLevels:
 
-            actionColorVals = action.actionValue
             payload_data = {"brightness": self.convert_brightness_export(device, device.brightness)}
 
             if device.supportsWhiteTemperature and 'whiteTemperature' in action.actionValue:
